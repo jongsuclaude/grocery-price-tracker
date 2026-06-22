@@ -19,6 +19,7 @@ import csv
 import html
 import random
 import subprocess
+import time
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -82,7 +83,7 @@ BLOCK_WORDS = [
     "망", "계란판", "에그트레이", "난좌", "트레이", "네트", "보관", "케이스", "소스",
     "씨앗", "모종", "종자", "모형", "스티커", "봉투", "비닐", "받침",
     "커터", "슬라이서", "다지기", "정리", "거치", "수납", "행거", "집게",
-    "파충류", "도마뱀", "사료", "분말", "가루", "즙", "환",
+    "파충류", "도마뱀", "사료", "즙", "환",
 ]
 
 
@@ -96,8 +97,17 @@ def query_naver(item, client_id, client_secret):
     req = urllib.request.Request(NAVER_SHOP_URL + "?" + params)
     req.add_header("X-Naver-Client-Id", client_id)
     req.add_header("X-Naver-Client-Secret", client_secret)
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
+    data = None
+    for attempt in range(4):  # 429(요청 과다) 시 백오프 후 재시도
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < 3:
+                time.sleep(0.6 * (attempt + 1))
+                continue
+            raise
 
     best = None
     for it in data.get("items", []):
@@ -228,6 +238,8 @@ def run():
             print(f"{mark}  {name:<14} {best['price']:>8,}원  (목표 {target:,}원)  [{best['mall']}]")
         else:
             print(f"  오류  {name:<14} {error}")
+        if not mock_mode:
+            time.sleep(0.1)  # 초당 호출 제한 회피
 
     log_history(results)                      # 오늘 가격을 history.csv 에 누적
     history = load_history()
