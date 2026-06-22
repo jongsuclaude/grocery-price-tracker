@@ -1,0 +1,11 @@
+# 비공개 키 — 절대 커밋 금지
+keys.json
+
+# 실행 때마다 새로 생성 (클라우드가 Pages로 게시)
+dashboard.html
+public/
+
+# 파이썬/맥 부산물
+__pycache__/
+*.pyc
+.DS_Store
