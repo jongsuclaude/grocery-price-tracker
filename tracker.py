@@ -109,7 +109,7 @@ def query_naver(item, client_id, client_secret):
                 continue
             raise
 
-    best = None
+    best_clean, best_any = None, None
     for it in data.get("items", []):
         try:
             price = int(it.get("lprice") or 0)
@@ -123,14 +123,21 @@ def query_naver(item, client_id, client_secret):
             continue
         if any(b in title for b in block):          # 부자재 단어 있으면 제외
             continue
-        if best is None or price < best["price"]:
-            best = {
-                "price": price,
-                "title": title,
-                "mall": it.get("mallName") or "쇼핑몰",
-                "link": it.get("link") or "",
-            }
-    return best
+        # 옵션 낚시 감지: 서로 다른 '무게/용량'이 2개 이상이면 lprice=최소옵션 가격
+        # (들어가서 원하는 용량 고르면 오름). '골라담기/택1'류도 더 싼 옵션이 숨은 낚시성.
+        sizes = set(re.findall(r"\d+\.?\d*\s?(?:kg|g|ml|l)", tl))
+        bait = len(sizes) >= 2 or any(k in title for k in ("골라담기", "택1", "택일", "모음전"))
+        cand = {
+            "price": price,
+            "title": title,
+            "mall": it.get("mallName") or "쇼핑몰",
+            "link": it.get("link") or "",
+        }
+        if best_any is None or price < best_any["price"]:
+            best_any = cand
+        if not bait and (best_clean is None or price < best_clean["price"]):
+            best_clean = cand
+    return best_clean or best_any   # 낚시 아닌 단일용량 우선, 없으면 폴백
 
 
 def mock_result(item):
