@@ -296,10 +296,15 @@ PAGE = """<!DOCTYPE html>
   .avg { color: #1d1d1f; font-variant-numeric: tabular-nums; }
   .dn { color: #1a7f37; font-weight: 600; }
   .up { color: #c0392b; font-weight: 600; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+  .tab { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
+         background: #fff; cursor: pointer; user-select: none; }
+  .tab.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
 </style></head><body>
 <h1>🥬 식재료 최저가</h1>
 <div class="meta">__UPDATED__ 기준 · __MODE__</div>
 <div class="summary">__SUMMARY__</div>
+<div class="tabs">__TABS__</div>
 <table>
   <thead><tr>
     <th>품목</th><th>현재 최저가</th><th>30일 평균</th><th>목표가</th><th>상태</th><th>쇼핑몰</th><th>링크</th>
@@ -308,6 +313,17 @@ PAGE = """<!DOCTYPE html>
 </table>
 <p class="note">※ 검색어 기준 최저가예요. 가공·중량·옵션(예: 냉동 다이스, 500g 옵션) 차이로 실제와 다를 수 있어요.
 품목 아래 회색 글씨가 실제 매칭된 상품이니 같이 확인하세요.</p>
+<script>
+  document.querySelectorAll('.tab').forEach(function (t) {
+    t.addEventListener('click', function () {
+      var cat = t.dataset.cat;
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === t); });
+      document.querySelectorAll('tbody tr').forEach(function (tr) {
+        tr.style.display = (cat === '전체' || tr.dataset.cat === cat) ? '' : 'none';
+      });
+    });
+  });
+</script>
 </body></html>"""
 
 
@@ -323,6 +339,7 @@ def write_dashboard(results, stats_map, mock_mode):
         item, best, error, hit = r["item"], r["best"], r["error"], r["hit"]
         name = html.escape(item.get("name", "?"))
         prod = html.escape(best["title"][:42]) if best else ""
+        cat = html.escape(item.get("category", "기타"))
         stats = stats_map.get(item.get("name", "?"))
         target = item.get("target_price")
         target_str = f"{target:,}원" if target else "-"
@@ -363,7 +380,7 @@ def write_dashboard(results, stats_map, mock_mode):
             avg_html = '<span class="prod">기록 시작</span>'
 
         rows.append(
-            "<tr>"
+            f'<tr data-cat="{cat}">'
             f'<td class="name">{name}<div class="prod">{prod}</div></td>'
             f'<td class="price">{price_html}</td>'
             f'<td class="avg">{avg_html}</td>'
@@ -374,10 +391,21 @@ def write_dashboard(results, stats_map, mock_mode):
             "</tr>"
         )
 
+    cat_order = ["채소", "과일", "고기", "계란", "두부", "조미료"]
+    present = [c for c in cat_order if any(r["item"].get("category") == c for r in results)]
+    for r in results:
+        c = r["item"].get("category")
+        if c and c not in present:
+            present.append(c)
+    tabs = ['<span class="tab active" data-cat="전체">전체</span>']
+    tabs += [f'<span class="tab" data-cat="{html.escape(c)}">{html.escape(c)}</span>'
+             for c in present]
+
     page = (PAGE
             .replace("__UPDATED__", now)
             .replace("__MODE__", mode)
             .replace("__SUMMARY__", summary)
+            .replace("__TABS__", "".join(tabs))
             .replace("__ROWS__", "\n".join(rows)))
     with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
         f.write(page)

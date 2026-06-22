@@ -11,20 +11,20 @@
     "macos_notification": true
   },
   "watchlist": [
-    { "name": "생양파 1kg",            "query": "양파 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스"] },
-    { "name": "두부 찌개용 (1모/300g)", "query": "찌개용 두부",   "target_price": 850,   "exclude": ["부침", "연두부", "순두부"] },
-    { "name": "두부 구이용 (1모/300g)", "query": "부침용 두부",   "target_price": 900,   "exclude": ["찌개", "연두부", "순두부"] },
-    { "name": "삼겹살 1근(600g)",       "query": "삼겹살 600g",   "target_price": 12900, "exclude": ["양념", "훈제", "다짐", "분쇄", "대패"] },
-    { "name": "목살 1근(600g)",         "query": "목살 600g",     "target_price": 13500, "exclude": ["양념", "훈제", "다짐", "분쇄", "대패"] },
-    { "name": "전지(앞다리살) 1근(600g)", "query": "앞다리살 600g", "target_price": 7800,  "exclude": ["양념", "훈제", "다짐", "분쇄"] },
-    { "name": "계란 대란 1판(30구)",     "query": "계란 대란 30구", "target_price": 11900, "exclude": ["도매"] },
-    { "name": "계란 특란 1판(30구)",     "query": "계란 특란 30구", "target_price": 8900,  "exclude": ["도매"] },
-    { "name": "대파 1kg",              "query": "대파 1kg",      "target_price": 2600,  "exclude": ["냉동", "다이스", "건조", "분태"] },
-    { "name": "감자 1kg",              "query": "감자 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스", "칩", "전분"] },
-    { "name": "수박 1통",              "query": "수박",          "target_price": 9900,  "exclude": ["모형", "비누", "향", "베개", "수영", "방향제", "즙", "아이스", "빙", "씨앗", "바", "미니", "애플"] },
-    { "name": "참외 2kg",              "query": "참외 2kg",      "target_price": 5870,  "exclude": ["씨앗", "모종", "즙", "청", "향"] },
-    { "name": "방울토마토 1kg",         "query": "방울토마토 1kg", "target_price": 7060,  "exclude": ["모종", "씨앗", "즙"] },
-    { "name": "깐마늘 1kg",            "query": "깐마늘 1kg",    "target_price": 2900,  "exclude": ["기계", "프레스", "모종", "종구", "다진", "냉동", "간마늘", "진액", "즙", "분말"] },
-    { "name": "순살 닭",               "query": "닭 순살",       "target_price": 3700,  "exclude": ["치킨", "양념", "튀김", "강정", "너겟", "돈까스", "가스", "볼", "맛"] }
+    { "name": "생양파 1kg",            "category": "채소",   "query": "양파 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스"] },
+    { "name": "대파 1kg",              "category": "채소",   "query": "대파 1kg",      "target_price": 2600,  "exclude": ["냉동", "다이스", "건조", "분태"] },
+    { "name": "감자 1kg",              "category": "채소",   "query": "감자 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스", "칩", "전분"] },
+    { "name": "수박 1통",              "category": "과일",   "query": "수박",          "target_price": 9900,  "exclude": ["모형", "비누", "향", "베개", "수영", "방향제", "즙", "아이스", "빙", "씨앗", "바", "미니", "애플"] },
+    { "name": "참외 2kg",              "category": "과일",   "query": "참외 2kg",      "target_price": 5870,  "exclude": ["씨앗", "모종", "즙", "청", "향"] },
+    { "name": "방울토마토 1kg",         "category": "과일",   "query": "방울토마토 1kg", "target_price": 7060,  "exclude": ["모종", "씨앗", "즙"] },
+    { "name": "삼겹살 1근(600g)",       "category": "고기",   "query": "삼겹살 600g",   "target_price": 12900, "exclude": ["양념", "훈제", "다짐", "분쇄", "대패"] },
+    { "name": "목살 1근(600g)",         "category": "고기",   "query": "목살 600g",     "target_price": 13500, "exclude": ["양념", "훈제", "다짐", "분쇄", "대패"] },
+    { "name": "전지(앞다리살) 1근(600g)", "category": "고기",   "query": "앞다리살 600g", "target_price": 7800,  "exclude": ["양념", "훈제", "다짐", "분쇄"] },
+    { "name": "순살 닭",               "category": "고기",   "query": "닭 순살",       "target_price": 3700,  "exclude": ["치킨", "양념", "튀김", "강정", "너겟", "돈까스", "가스", "볼", "맛"] },
+    { "name": "계란 대란 1판(30구)",     "category": "계란",   "query": "계란 대란 30구", "target_price": 11900, "exclude": ["도매"] },
+    { "name": "계란 특란 1판(30구)",     "category": "계란",   "query": "계란 특란 30구", "target_price": 8900,  "exclude": ["도매"] },
+    { "name": "두부 찌개용 (1모/300g)", "category": "두부",   "query": "찌개용 두부",   "target_price": 850,   "exclude": ["부침", "연두부", "순두부"] },
+    { "name": "두부 구이용 (1모/300g)", "category": "두부",   "query": "부침용 두부",   "target_price": 900,   "exclude": ["찌개", "연두부", "순두부"] },
+    { "name": "깐마늘 1kg",            "category": "조미료", "query": "깐마늘 1kg",    "target_price": 2900,  "exclude": ["기계", "프레스", "모종", "종구", "다진", "냉동", "간마늘", "진액", "즙", "분말"] }
   ]
 }
