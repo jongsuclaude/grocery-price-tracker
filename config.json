@@ -20,6 +20,11 @@
     { "name": "계란 대란 1판(30구)",     "query": "계란 대란 30구", "target_price": 11900, "exclude": ["도매"] },
     { "name": "계란 특란 1판(30구)",     "query": "계란 특란 30구", "target_price": 8900,  "exclude": ["도매"] },
     { "name": "대파 1kg",              "query": "대파 1kg",      "target_price": 2600,  "exclude": ["냉동", "다이스", "건조", "분태"] },
-    { "name": "감자 1kg",              "query": "감자 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스", "칩", "전분"] }
+    { "name": "감자 1kg",              "query": "감자 1kg",      "target_price": 1800,  "exclude": ["냉동", "다이스", "칩", "전분"] },
+    { "name": "수박 1통",              "query": "수박",          "target_price": 9900,  "exclude": ["모형", "비누", "향", "베개", "수영", "방향제", "즙", "아이스", "빙", "씨앗", "바", "미니", "애플"] },
+    { "name": "참외 2kg",              "query": "참외 2kg",      "target_price": 5870,  "exclude": ["씨앗", "모종", "즙", "청", "향"] },
+    { "name": "방울토마토 1kg",         "query": "방울토마토 1kg", "target_price": 7060,  "exclude": ["모종", "씨앗", "즙"] },
+    { "name": "깐마늘 1kg",            "query": "깐마늘 1kg",    "target_price": 2900,  "exclude": ["기계", "프레스", "모종", "종구", "다진", "냉동", "간마늘", "진액", "즙", "분말"] },
+    { "name": "순살 닭",               "query": "닭 순살",       "target_price": 3700,  "exclude": ["치킨", "양념", "튀김", "강정", "너겟", "돈까스", "가스", "볼", "맛"] }
   ]
 }
