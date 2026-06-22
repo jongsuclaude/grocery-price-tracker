@@ -312,6 +312,18 @@ PAGE = """<!DOCTYPE html>
   .tab { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
          background: #fff; cursor: pointer; user-select: none; }
   .tab.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  @media (max-width: 640px) {
+    body { margin: 14px auto; }
+    h1 { font-size: 21px; }
+    table, thead, tbody, tr, td { display: block; width: auto; }
+    thead { display: none; }
+    tbody tr { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+               padding: 12px 14px; margin-bottom: 10px; }
+    td { padding: 3px 0; border: none; font-size: 14px; }
+    td:not(.name)::before { content: attr(data-label) "  "; color: #86868b; font-size: 12px; }
+    td.name { font-size: 15px; padding-bottom: 7px; margin-bottom: 4px; border-bottom: 1px solid #f0f0f2; }
+    .cards { display: block; }
+  }
 </style></head><body>
 <h1>🥬 식재료 최저가</h1>
 <div class="meta">__UPDATED__ 기준 · __MODE__</div>
@@ -394,12 +406,12 @@ def write_dashboard(results, stats_map, mock_mode):
         rows.append(
             f'<tr data-cat="{cat}">'
             f'<td class="name">{name}<div class="prod">{prod}</div></td>'
-            f'<td class="price">{price_html}</td>'
-            f'<td class="avg">{avg_html}</td>'
-            f'<td class="target">{target_str}</td>'
-            f"<td>{status}</td>"
-            f"<td>{mall}</td>"
-            f"<td>{link_html}</td>"
+            f'<td class="price" data-label="최저가">{price_html}</td>'
+            f'<td class="avg" data-label="30일 평균">{avg_html}</td>'
+            f'<td class="target" data-label="목표가">{target_str}</td>'
+            f'<td data-label="상태">{status}</td>'
+            f'<td data-label="쇼핑몰">{mall}</td>'
+            f'<td data-label="링크">{link_html}</td>'
             "</tr>"
         )
 
