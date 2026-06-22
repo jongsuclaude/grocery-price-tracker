@@ -199,7 +199,8 @@ def history_stats(rows, name, days=30):
             daily[d] = p
     if not daily:
         return None
-    recent = sorted(daily)[-days:]
+    dates = sorted(daily)
+    recent = dates[-days:]
     vals = [daily[d] for d in recent]
     min_date = min(daily, key=lambda k: daily[k])
     return {
@@ -207,6 +208,8 @@ def history_stats(rows, name, days=30):
         "avg": round(sum(vals) / len(vals)),
         "min": daily[min_date],
         "min_date": min_date,
+        "prev": daily[dates[-2]] if len(dates) >= 2 else None,       # 이전 갱신(전일) 가격
+        "prev_date": dates[-2] if len(dates) >= 2 else None,
     }
 
 
@@ -338,7 +341,7 @@ PAGE = """<!DOCTYPE html>
 <div class="tabs">__TABS__</div>
 <table>
   <thead><tr>
-    <th>품목</th><th>현재 최저가</th><th>30일 평균</th><th>목표가</th><th>상태</th><th>쇼핑몰</th><th>링크</th>
+    <th>품목</th><th>오늘 가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>쇼핑몰</th><th>링크</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -362,61 +365,75 @@ def write_dashboard(results, stats_map, mock_mode):
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     mode = ('<span class="badge mock">목업 데이터</span>' if mock_mode
             else '<span class="badge live">실시간 · 네이버 쇼핑</span>')
-    hits = sum(1 for r in results if r["hit"])
-    summary = f"총 <b>{len(results)}</b>개 중 <b>{hits}</b>개가 목표가 이하 — 지금 사기 좋아요."
+    cheaper = pricier = lows = 0
+    for r in results:
+        b = r["best"]
+        s = stats_map.get(r["item"].get("name", "?"))
+        if not (b and s):
+            continue
+        if b["price"] <= s["min"]:
+            lows += 1
+        if s.get("prev") is not None:
+            if b["price"] < s["prev"]:
+                cheaper += 1
+            elif b["price"] > s["prev"]:
+                pricier += 1
+    summary = (f'총 <b>{len(results)}</b>개 · 매일 오전 10시 갱신 · '
+               f'전일 대비 <span class="dn">▼{cheaper}</span> / <span class="up">▲{pricier}</span>'
+               f' · 역대최저 <b>{lows}</b>개')
 
     rows = []
     for r in results:
-        item, best, error, hit = r["item"], r["best"], r["error"], r["hit"]
+        item, best, error = r["item"], r["best"], r["error"]
         name = html.escape(item.get("name", "?"))
         prod = html.escape(best["title"][:42]) if best else ""
         cat = html.escape(item.get("category", "기타"))
         stats = stats_map.get(item.get("name", "?"))
-        target = item.get("target_price")
-        target_str = f"{target:,}원" if target else "-"
+        cur = best["price"] if best else None
+        is_low = bool(best and stats and cur <= stats["min"])  # 오늘이 역대 최저면 강조
 
         if error:
             price_html = f'<span class="err">조회실패: {html.escape(error)}</span>'
-            mall, link, status = "-", "", '<span class="badge wait">오류</span>'
+            mall, link = "-", ""
         elif best:
             mall = html.escape(best["mall"])
             link = best["link"]
-            if hit:
-                price_html = f'<b class="hit">{best["price"]:,}원</b>'
-                status = '<span class="badge buy">🟢 지금 사기 좋음</span>'
-            else:
-                price_html = f'{best["price"]:,}원'
-                status = '<span class="badge wait">⚪ 대기</span>'
+            price_html = (f'<b class="hit">{cur:,}원</b> 📉' if is_low
+                          else f'{cur:,}원')
         else:
             price_html = '<span class="err">결과 없음</span>'
-            mall, link, status = "-", "", '<span class="badge wait">-</span>'
+            mall, link = "-", ""
 
         link_html = (f'<a href="{html.escape(link)}" target="_blank">보기 ↗</a>'
                      if link else "-")
 
-        # 30일 평균 + 오늘이 평균/역대최저 대비 어떤지
-        if stats:
-            sub = f'{stats["days"]}일 기록'
-            if best:
-                diff = best["price"] - stats["avg"]
-                if stats["avg"] > 0 and diff != 0:
-                    pct = round(diff / stats["avg"] * 100)
-                    cls = "dn" if diff < 0 else "up"
-                    sign = "" if diff < 0 else "+"
-                    sub += f' · 오늘 <span class="{cls}">{sign}{pct}%</span>'
-                if best["price"] <= stats["min"]:
-                    sub += ' · <span class="dn">📉 역대최저</span>'
-            avg_html = f'{stats["avg"]:,}원<div class="prod">{sub}</div>'
+        # 전일(이전 갱신) 대비 변동
+        if best and stats and stats.get("prev") is not None:
+            d = cur - stats["prev"]
+            if d > 0:
+                delta_html = f'<span class="up">▲ +{d:,}원</span>'
+            elif d < 0:
+                delta_html = f'<span class="dn">▼ -{abs(d):,}원</span>'
+            else:
+                delta_html = '<span class="prod">– 동일</span>'
         else:
+            delta_html = '<span class="prod">첫 기록</span>'
+
+        # 역대 최저 / 30일 평균
+        if stats:
+            low_html = f'{stats["min"]:,}원<div class="prod">{stats["min_date"]}</div>'
+            avg_html = f'{stats["avg"]:,}원<div class="prod">{stats["days"]}일 기록</div>'
+        else:
+            low_html = "-"
             avg_html = '<span class="prod">기록 시작</span>'
 
         rows.append(
             f'<tr data-cat="{cat}">'
             f'<td class="name">{name}<div class="prod">{prod}</div></td>'
-            f'<td class="price" data-label="최저가">{price_html}</td>'
+            f'<td class="price" data-label="오늘 가격">{price_html}</td>'
+            f'<td data-label="전일 대비">{delta_html}</td>'
+            f'<td class="avg" data-label="역대 최저">{low_html}</td>'
             f'<td class="avg" data-label="30일 평균">{avg_html}</td>'
-            f'<td class="target" data-label="목표가">{target_str}</td>'
-            f'<td data-label="상태">{status}</td>'
             f'<td data-label="쇼핑몰">{mall}</td>'
             f'<td data-label="링크">{link_html}</td>'
             "</tr>"
