@@ -1,0 +1,2 @@
+# history.csv 는 추가 전용 로그 — 동시 커밋 충돌 시 양쪽 줄을 합침(union)
+history.csv merge=union

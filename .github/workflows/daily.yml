@@ -36,8 +36,13 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add history.csv
-          git commit -m "chore: 가격 기록 (자동)" || echo "변경 없음"
-          git push
+          git commit -m "chore: 가격 기록 (자동)" || { echo "변경 없음"; exit 0; }
+          for i in 1 2 3; do
+            git pull --no-rebase --no-edit origin main && git push && exit 0
+            echo "원격이 앞서감 — 병합 후 재시도 $i"
+            sleep 3
+          done
+          echo "push 실패"; exit 1
 
       - name: 페이지 준비
         run: |
