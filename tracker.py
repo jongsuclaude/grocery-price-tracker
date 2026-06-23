@@ -365,8 +365,8 @@ PAGE = """<!DOCTYPE html>
   body { font-family: -apple-system, system-ui, sans-serif; max-width: 860px;
          margin: 32px auto; padding: 0 16px; color: #1d1d1f; background: #fbfbfd; }
   h1 { font-size: 22px; margin: 0; }
-  .meta { color: #6e6e73; font-size: 13px; }
-  .hdr { display: flex; justify-content: space-between; align-items: baseline;
+  .meta { color: #6e6e73; font-size: 11px; text-align: right; line-height: 1.5; }
+  .hdr { display: flex; justify-content: space-between; align-items: center;
          gap: 8px 12px; flex-wrap: wrap; margin-bottom: 16px; }
   .badge { display: inline-block; padding: 2px 9px; border-radius: 999px;
            font-size: 12px; font-weight: 600; }
@@ -421,7 +421,7 @@ PAGE = """<!DOCTYPE html>
   @media (max-width: 640px) {
     body { margin: 12px auto; }
     h1 { font-size: 20px; }
-    .meta, .summary { font-size: 12.5px; }
+    .meta { font-size: 10.5px; }
     table, thead, tbody, tr { display: block; width: auto; }
     thead { display: none; }
     tbody tr { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
@@ -436,8 +436,7 @@ PAGE = """<!DOCTYPE html>
   }
 </style></head><body>
 <div class="hdr"><h1>🥬 식재료 최저가</h1>
-  <div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div></div>
-<div class="summary">__SUMMARY__</div>
+  <div class="meta">__UPDATED__ (KST)<br>매일 오전 10시 갱신</div></div>
 <div class="tabs">__TABS__</div>
 <div class="controls">
   <span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
@@ -524,22 +523,6 @@ def write_dashboard(results, stats_map, mock_mode):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     mode = ('<span class="badge mock">목업 데이터</span>' if mock_mode
             else '<span class="badge live">실시간 · 네이버 쇼핑</span>')
-    cheaper = pricier = lows = 0
-    for r in results:
-        b = r["best"]
-        s = stats_map.get(r["item"].get("name", "?"))
-        if not (b and s):
-            continue
-        if b["price"] <= s["min"]:
-            lows += 1
-        if s.get("prev") is not None:
-            if b["price"] < s["prev"]:
-                cheaper += 1
-            elif b["price"] > s["prev"]:
-                pricier += 1
-    summary = (f'매일 오전 10시 갱신 · '
-               f'전일 대비 <span class="dn">▼{cheaper}</span> / <span class="up">▲{pricier}</span>'
-               f' · 역대최저 <b>{lows}</b>개')
 
     rows = []
     for idx, r in enumerate(results):
@@ -645,7 +628,6 @@ def write_dashboard(results, stats_map, mock_mode):
     page = (PAGE
             .replace("__UPDATED__", now)
             .replace("__MODE__", mode)
-            .replace("__SUMMARY__", summary)
             .replace("__TABS__", "".join(tabs))
             .replace("__ROWS__", "\n".join(rows)))
     with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
