@@ -88,8 +88,41 @@ BLOCK_WORDS = [
 ]
 
 
+def parse_qty(title):
+    """제목에서 용량/개수를 추출 → (기준수량, 단위유형). 못 찾으면 None.
+    단위유형: 'g'(무게, g기준), 'ml'(부피, ml기준), 'ct'(개수)"""
+    t = title.lower()
+    m = re.search(r"(\d+\.?\d*)\s?kg", t)
+    if m:
+        return (float(m.group(1)) * 1000, "g")
+    m = re.search(r"(\d+\.?\d*)\s?ml", t)
+    if m:
+        return (float(m.group(1)), "ml")
+    m = re.search(r"(\d+\.?\d*)\s?l(?![a-z])", t)
+    if m:
+        return (float(m.group(1)) * 1000, "ml")
+    m = re.search(r"(\d+\.?\d*)\s?g(?![a-z])", t)
+    if m:
+        return (float(m.group(1)), "g")
+    m = re.search(r"(\d+)\s?(구|개|매|입|포|봉|통|모|미|알|장|수)", t)
+    if m:
+        return (float(m.group(1)), "ct")
+    return None
+
+
+def unit_label(price, amount, utype):
+    """단가 문구 (100g당/100ml당/개당)"""
+    if amount <= 0:
+        return ""
+    if utype == "g":
+        return f"100g당 {round(price / amount * 100):,}원"
+    if utype == "ml":
+        return f"100ml당 {round(price / amount * 100):,}원"
+    return f"개당 {round(price / amount):,}원"
+
+
 def query_naver(item, client_id, client_secret):
-    """정확도순으로 받아 부자재를 거른 뒤, 검색어 단어를 모두 포함한 항목 중 최저가 1개 반환"""
+    """정확도순으로 받아 부자재·낚시를 거른 뒤, 단가(그램당/개당) 최저를 우선 반환"""
     query = item.get("query", item["name"])
     tokens = query.lower().split()
     block = BLOCK_WORDS + item.get("exclude", [])  # config 에서 품목별 추가 제외어 가능
@@ -137,11 +170,43 @@ def query_naver(item, client_id, client_secret):
         anys.append(cand)
         if not bait:
             cleans.append(cand)
-    pool = sorted(cleans or anys, key=lambda c: c["price"])  # 낚시 아닌 단일용량 우선, 없으면 폴백
+    pool = cleans or anys
     if not pool:
         return None
-    best = dict(pool[0])
-    best["alts"] = pool[1:6]   # 비슷한 상품(가격 오름차순 대안) 최대 5개
+    for c in pool:                       # 후보별 단가(그램당/개당) 계산 — 표시용
+        q = parse_qty(c["title"])
+        if q:
+            amt, ut = q
+            c["amount"], c["utype"] = amt, ut
+            c["unit_key"] = c["price"] / amt
+            c["unit_label"] = unit_label(c["price"], amt, ut)
+        else:
+            c["amount"] = c["utype"] = c["unit_key"] = None
+            c["unit_label"] = ""
+
+    # 가정용 크기 범위 안에서 '단가(그램당/개당) 최저'를 고른다.
+    # 검색어에 용량 있으면 그 크기의 0.5~2.5배, 없으면 기본 상한(대용량 업소용 제외).
+    # 기준 용량(config의 size, 없으면 검색어에서 추출)의 0.5~1.5배 범위에서 '단가 최저'를 고른다.
+    # → 소량(200g) 함정도, 1~2배 대용량도 피하고 기준 크기 근처에서 그램당 싼 걸 선택.
+    anchor = parse_qty(item.get("size") or item.get("query", ""))
+
+    def in_band(c):
+        if not (anchor and c["amount"] and c["utype"]):
+            return False
+        a_amt, a_ut = anchor
+        return c["utype"] == a_ut and a_amt * 0.5 <= c["amount"] <= a_amt * 1.5
+
+    band = [c for c in pool if in_band(c)]
+    if band:
+        utypes = [c["utype"] for c in band]
+        dom = max(set(utypes), key=utypes.count)                     # 같은 단위끼리 비교
+        grp = sorted((c for c in band if c["utype"] == dom), key=lambda c: c["unit_key"])
+        gids = {id(c) for c in grp}
+        ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
+    else:
+        ordered = sorted(pool, key=lambda c: c["price"])             # 범위 후보 없으면 절대 최저가
+    best = dict(ordered[0])
+    best["alts"] = ordered[1:6]   # 비슷한 상품(대안) 최대 5개
     return best
 
 
@@ -313,9 +378,11 @@ PAGE = """<!DOCTYPE html>
   th { background: #f5f5f7; font-size: 12px; color: #6e6e73; text-transform: uppercase; letter-spacing: .03em; }
   tr:last-child td { border-bottom: none; }
   .name { font-weight: 600; }
-  .nhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .nhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .nm { font-weight: 600; }
-  .np { font-variant-numeric: tabular-nums; font-weight: 700; flex: none; }
+  .np { display: flex; flex-direction: column; align-items: flex-end;
+        font-variant-numeric: tabular-nums; font-weight: 700; flex: none; }
+  .unit { font-size: 11px; color: #86868b; font-weight: 400; }
   .price { font-variant-numeric: tabular-nums; }
   .hit { color: #1a7f37; }
   .target { color: #6e6e73; font-variant-numeric: tabular-nums; }
@@ -478,6 +545,8 @@ def write_dashboard(results, stats_map, mock_mode):
         is_low = bool(best and stats and cur <= stats["min"])  # 오늘이 역대 최저면 강조
         dropped = bool(best and stats and stats.get("prev") is not None
                        and cur < stats["prev"])  # 어제보다 싸짐
+        unit_top = (f'<span class="unit">{html.escape(best["unit_label"])}</span>'
+                    if best and best.get("unit_label") else "")
 
         if error:
             price_html = f'<span class="err">조회실패: {html.escape(error)}</span>'
@@ -499,7 +568,9 @@ def write_dashboard(results, stats_map, mock_mode):
         if best and best.get("alts"):
             lis = "".join(
                 f'<a class="alt" target="_blank" href="{html.escape(a["link"] or ("https://search.shopping.naver.com/search/all?query=" + urllib.parse.quote(a["title"])))}">'
-                f'{a["price"]:,}원 · {html.escape(a["title"][:30])} '
+                f'{a["price"]:,}원'
+                f'{(" · " + html.escape(a["unit_label"])) if a.get("unit_label") else ""}'
+                f' · {html.escape(a["title"][:26])} '
                 f'<span class="amall">{html.escape(a["mall"])}</span> ↗</a>'
                 for a in best["alts"]
             )
@@ -539,7 +610,8 @@ def write_dashboard(results, stats_map, mock_mode):
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
             f'data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
             f'<td class="name">'
-            f'<div class="nhead"><span class="nm">{name}</span><span class="np">{price_html}</span></div>'
+            f'<div class="nhead"><span class="nm">{name}</span>'
+            f'<span class="np">{price_html}{unit_top}</span></div>'
             f'<div class="prod">{prod}</div>{alts_html}</td>'
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
