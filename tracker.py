@@ -322,7 +322,7 @@ PAGE = """<!DOCTYPE html>
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
-  .alt { display: block; font-size: 12px; color: #515154; padding: 4px 0 0; text-decoration: none; line-height: 1.4; }
+  .alt { display: block; font-size: 12px; color: #0066cc; padding: 5px 0 0; text-decoration: none; line-height: 1.4; }
   .alt .amall { color: #86868b; }
   .alt.more { color: #0066cc; font-weight: 600; }
   .avg { color: #1d1d1f; font-variant-numeric: tabular-nums; }
@@ -338,14 +338,17 @@ PAGE = """<!DOCTYPE html>
   @media (max-width: 640px) {
     body { margin: 14px auto; }
     h1 { font-size: 21px; }
-    table, thead, tbody, tr, td { display: block; width: auto; }
+    table, thead, tbody, tr { display: block; width: auto; }
     thead { display: none; }
     tbody tr { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
                padding: 12px 14px; margin-bottom: 10px; }
-    td { padding: 3px 0; border: none; font-size: 14px; }
-    td:not(.name)::before { content: attr(data-label) "  "; color: #86868b; font-size: 12px; }
-    td.name { font-size: 15px; padding-bottom: 7px; margin-bottom: 4px; border-bottom: 1px solid #f0f0f2; }
-    .cards { display: block; }
+    td.name { display: block; font-size: 15px; padding: 0 0 8px; margin-bottom: 6px;
+              border-bottom: 1px solid #f0f0f2; }
+    td:not(.name) { display: flex; justify-content: space-between; align-items: baseline;
+                    gap: 12px; padding: 5px 0; border: none; font-size: 14px; }
+    td:not(.name)::before { content: attr(data-label); color: #86868b; font-size: 12px; flex: none; }
+    td .cv { text-align: right; min-width: 0; }
+    td .cv .prod { margin-top: 1px; }
   }
 </style></head><body>
 <h1>🥬 식재료 최저가</h1>
@@ -439,9 +442,9 @@ def write_dashboard(results, stats_map, mock_mode):
         alts_html = ""
         if best and best.get("alts"):
             lis = "".join(
-                f'<a class="alt" href="{html.escape(a["link"])}" target="_blank">'
+                f'<a class="alt" target="_blank" href="{html.escape(a["link"] or ("https://search.shopping.naver.com/search/all?query=" + urllib.parse.quote(a["title"])))}">'
                 f'{a["price"]:,}원 · {html.escape(a["title"][:30])} '
-                f'<span class="amall">{html.escape(a["mall"])}</span></a>'
+                f'<span class="amall">{html.escape(a["mall"])}</span> ↗</a>'
                 for a in best["alts"]
             )
             q = urllib.parse.quote(item.get("query", item.get("name", "")))
@@ -474,12 +477,12 @@ def write_dashboard(results, stats_map, mock_mode):
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}">'
             f'<td class="name">{name}<div class="prod">{prod}</div>{alts_html}</td>'
-            f'<td class="price" data-label="오늘 가격">{price_html}</td>'
-            f'<td data-label="전일 대비">{delta_html}</td>'
-            f'<td class="avg" data-label="역대 최저">{low_html}</td>'
-            f'<td class="avg" data-label="30일 평균">{avg_html}</td>'
-            f'<td data-label="쇼핑몰">{mall}</td>'
-            f'<td data-label="링크">{link_html}</td>'
+            f'<td class="price" data-label="오늘 가격"><span class="cv">{price_html}</span></td>'
+            f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
+            f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
+            f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
+            f'<td data-label="쇼핑몰"><span class="cv">{mall}</span></td>'
+            f'<td data-label="링크"><span class="cv">{link_html}</span></td>'
             "</tr>"
         )
 
