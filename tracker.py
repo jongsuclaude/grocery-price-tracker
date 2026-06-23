@@ -390,6 +390,8 @@ PAGE = """<!DOCTYPE html>
   a { color: #0066cc; text-decoration: none; }
   .summary { font-size: 15px; margin: 18px 0 8px; }
   .prod { color: #86868b; font-weight: 400; font-size: 12px; margin-top: 3px; }
+  .prodlink { display: block; color: #86868b; font-size: 12px; margin-top: 4px; text-decoration: none; line-height: 1.4; }
+  .prodlink:hover { color: #0066cc; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
@@ -413,19 +415,20 @@ PAGE = """<!DOCTYPE html>
   .sort.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
   .spark { vertical-align: middle; }
   @media (max-width: 640px) {
-    body { margin: 14px auto; }
-    h1 { font-size: 21px; }
+    body { margin: 12px auto; }
+    h1 { font-size: 20px; }
+    .meta, .summary { font-size: 12.5px; }
     table, thead, tbody, tr { display: block; width: auto; }
     thead { display: none; }
-    tbody tr { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
-               padding: 12px 14px; margin-bottom: 10px; }
-    td.name { display: block; font-size: 15px; padding: 0 0 8px; margin-bottom: 6px;
-              border-bottom: 1px solid #f0f0f2; }
+    tbody tr { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+               padding: 13px 15px; margin-bottom: 9px; }
+    td.name { display: block; padding: 0; margin: 0; border: none; }
+    td[data-label="추이"] { display: none; }                 /* 모바일선 추이 숨김(데스크탑만) */
     td:not(.name) { display: flex; justify-content: space-between; align-items: baseline;
-                    gap: 12px; padding: 5px 0; border: none; font-size: 14px; }
-    td:not(.name)::before { content: attr(data-label); color: #86868b; font-size: 12px; flex: none; }
-    td .cv { text-align: right; min-width: 0; }
-    td .cv .prod { margin-top: 1px; }
+                    gap: 12px; padding: 3px 0; border: none; font-size: 13px; }
+    td:not(.name)::before { content: attr(data-label); color: #a1a1a6; font-size: 12px; flex: none; }
+    td:not(.name) .cv { text-align: right; color: #3a3a3c; }
+    td[data-label="전일 대비"] { margin-top: 9px; padding-top: 9px; border-top: 1px solid #f2f2f4; }
   }
 </style></head><body>
 <h1>🥬 식재료 최저가</h1>
@@ -442,7 +445,7 @@ PAGE = """<!DOCTYPE html>
 </div>
 <table>
   <thead><tr>
-    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th><th>쇼핑몰</th><th>링크</th>
+    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -560,8 +563,13 @@ def write_dashboard(results, stats_map, mock_mode):
             price_html = '<span class="err">결과 없음</span>'
             mall, link = "-", ""
 
-        link_html = (f'<a href="{html.escape(link)}" target="_blank">보기 ↗</a>'
-                     if link else "-")
+        # 매칭 상품 + 쇼핑몰 + 링크를 한 줄 클릭 링크로 통합
+        if best:
+            inner = f'{prod} · {mall}' if prod else mall
+            prod_line = (f'<a class="prodlink" href="{html.escape(link)}" target="_blank">{inner} ↗</a>'
+                         if link else f'<div class="prod">{inner}</div>')
+        else:
+            prod_line = ""
 
         # 비슷한 상품(가격순 대안) + 네이버 검색 더보기
         alts_html = ""
@@ -612,13 +620,11 @@ def write_dashboard(results, stats_map, mock_mode):
             f'<td class="name">'
             f'<div class="nhead"><span class="nm">{name}</span>'
             f'<span class="np">{price_html}{unit_top}</span></div>'
-            f'<div class="prod">{prod}</div>{alts_html}</td>'
+            f'{prod_line}{alts_html}</td>'
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
             f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
             f'<td class="avg" data-label="추이"><span class="cv">{spark_html}</span></td>'
-            f'<td data-label="쇼핑몰"><span class="cv">{mall}</span></td>'
-            f'<td data-label="링크"><span class="cv">{link_html}</span></td>'
             "</tr>"
         )
 
