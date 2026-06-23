@@ -210,6 +210,7 @@ def history_stats(rows, name, days=30):
     min_date = min(daily, key=lambda k: daily[k])
     return {
         "days": len(daily),
+        "series": vals,                          # 추이(스파크라인)용 일별 최저가
         "avg": round(sum(vals) / len(vals)),
         "min": daily[min_date],
         "min_date": min_date,
@@ -333,8 +334,14 @@ PAGE = """<!DOCTYPE html>
          background: #fff; cursor: pointer; user-select: none; }
   .tab.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
   .toggle { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
-            background: #fff; cursor: pointer; user-select: none; display: inline-block; margin-bottom: 14px; }
+            background: #fff; cursor: pointer; user-select: none; display: inline-block; }
   .toggle.active { background: #1a7f37; color: #fff; border-color: #1a7f37; }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 14px; }
+  .sortbar { font-size: 12px; color: #86868b; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+  .sort { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid #ddd;
+          background: #fff; cursor: pointer; user-select: none; color: #1d1d1f; }
+  .sort.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  .spark { vertical-align: middle; }
   @media (max-width: 640px) {
     body { margin: 14px auto; }
     h1 { font-size: 21px; }
@@ -355,10 +362,17 @@ PAGE = """<!DOCTYPE html>
 <div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div>
 <div class="summary">__SUMMARY__</div>
 <div class="tabs">__TABS__</div>
-<span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
+<div class="controls">
+  <span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
+  <span class="sortbar">정렬
+    <span class="sort active" data-sort="idx">기본</span>
+    <span class="sort" data-sort="price">가격 낮은순</span>
+    <span class="sort" data-sort="drop">낙폭순</span>
+  </span>
+</div>
 <table>
   <thead><tr>
-    <th>품목</th><th>오늘 가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>쇼핑몰</th><th>링크</th>
+    <th>품목</th><th>오늘 가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th><th>쇼핑몰</th><th>링크</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -386,8 +400,47 @@ PAGE = """<!DOCTYPE html>
     dt.classList.toggle('active', dropOnly);
     applyFilter();
   });
+  function sortRows(mode) {
+    var tbody = document.querySelector('tbody');
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    rows.sort(function (a, b) {
+      if (mode === 'price') return (+a.dataset.price) - (+b.dataset.price);
+      if (mode === 'drop')  return (+a.dataset.delta) - (+b.dataset.delta);
+      return (+a.dataset.idx) - (+b.dataset.idx);
+    });
+    rows.forEach(function (r) { tbody.appendChild(r); });
+  }
+  document.querySelectorAll('.sort').forEach(function (s) {
+    s.addEventListener('click', function () {
+      document.querySelectorAll('.sort').forEach(function (x) { x.classList.toggle('active', x === s); });
+      sortRows(s.dataset.sort);
+    });
+  });
 </script>
 </body></html>"""
+
+
+def sparkline_svg(series):
+    """일별 최저가 시계열을 작은 인라인 SVG 추이선으로 (내림=초록, 오름=빨강)"""
+    series = [v for v in (series or []) if v is not None]
+    if len(series) < 2:
+        return '<span class="prod">–</span>'
+    w, h, pad = 72, 22, 3
+    lo, hi = min(series), max(series)
+    rng = (hi - lo) or 1
+    n = len(series)
+    pts = []
+    for i, v in enumerate(series):
+        x = pad + (w - 2 * pad) * (i / (n - 1))
+        y = pad + (h - 2 * pad) * (1 - (v - lo) / rng)
+        pts.append(f"{x:.1f},{y:.1f}")
+    color = ("#1a7f37" if series[-1] < series[0]
+             else "#c0392b" if series[-1] > series[0] else "#86868b")
+    lx, ly = pts[-1].split(",")
+    return (f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
+            f'<polyline points="{" ".join(pts)}" fill="none" stroke="{color}" '
+            f'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
+            f'<circle cx="{lx}" cy="{ly}" r="2" fill="{color}"/></svg>')
 
 
 def write_dashboard(results, stats_map, mock_mode):
@@ -412,7 +465,7 @@ def write_dashboard(results, stats_map, mock_mode):
                f' · 역대최저 <b>{lows}</b>개')
 
     rows = []
-    for r in results:
+    for idx, r in enumerate(results):
         item, best, error = r["item"], r["best"], r["error"]
         name = html.escape(item.get("name", "?"))
         prod = html.escape(best["title"][:42]) if best else ""
@@ -474,13 +527,20 @@ def write_dashboard(results, stats_map, mock_mode):
             low_html = "-"
             avg_html = '<span class="prod">기록 시작</span>'
 
+        # 추이(스파크라인) + 정렬용 값
+        spark_html = sparkline_svg(stats["series"]) if stats else '<span class="prod">–</span>'
+        price_sort = cur if cur is not None else 99999999
+        delta_sort = (cur - stats["prev"]) if (best and stats and stats.get("prev") is not None) else 0
+
         rows.append(
-            f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}">'
+            f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
+            f'data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
             f'<td class="name">{name}<div class="prod">{prod}</div>{alts_html}</td>'
             f'<td class="price" data-label="오늘 가격"><span class="cv">{price_html}</span></td>'
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
             f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
+            f'<td class="avg" data-label="추이"><span class="cv">{spark_html}</span></td>'
             f'<td data-label="쇼핑몰"><span class="cv">{mall}</span></td>'
             f'<td data-label="링크"><span class="cv">{link_html}</span></td>'
             "</tr>"
