@@ -141,7 +141,7 @@ def query_naver(item, client_id, client_secret):
     if not pool:
         return None
     best = dict(pool[0])
-    best["alts"] = pool[1:5]   # 비슷한 상품(가격순 대안) 최대 4개
+    best["alts"] = pool[1:6]   # 비슷한 상품(가격 오름차순 대안) 최대 5개
     return best
 
 
