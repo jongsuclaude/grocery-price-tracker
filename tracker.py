@@ -392,8 +392,7 @@ PAGE = """<!DOCTYPE html>
   a { color: #0066cc; text-decoration: none; }
   .summary { font-size: 15px; margin: 18px 0 8px; }
   .prod { color: #86868b; font-weight: 400; font-size: 12px; margin-top: 3px; }
-  .prodlink { display: block; color: #86868b; font-size: 12px; margin-top: 4px; text-decoration: none; line-height: 1.4; }
-  .prodlink:hover { color: #0066cc; }
+  .prodlink { display: block; color: #0066cc; font-size: 12px; margin-top: 4px; text-decoration: none; line-height: 1.4; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
@@ -427,7 +426,6 @@ PAGE = """<!DOCTYPE html>
     tbody tr { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
                padding: 13px 15px; margin-bottom: 9px; }
     td.name { display: block; padding: 0; margin: 0; border: none; }
-    td[data-label="추이"] { display: none; }                 /* 모바일선 추이 숨김(데스크탑만) */
     td:not(.name) { display: flex; justify-content: space-between; align-items: baseline;
                     gap: 12px; padding: 3px 0; border: none; font-size: 13px; }
     td:not(.name)::before { content: attr(data-label); color: #a1a1a6; font-size: 12px; flex: none; }
@@ -448,7 +446,7 @@ PAGE = """<!DOCTYPE html>
 </div>
 <table>
   <thead><tr>
-    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th>
+    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -496,29 +494,6 @@ PAGE = """<!DOCTYPE html>
 </body></html>"""
 
 
-def sparkline_svg(series):
-    """일별 최저가 시계열을 작은 인라인 SVG 추이선으로 (내림=초록, 오름=빨강)"""
-    series = [v for v in (series or []) if v is not None]
-    if len(series) < 2:
-        return '<span class="prod">–</span>'
-    w, h, pad = 72, 22, 3
-    lo, hi = min(series), max(series)
-    rng = (hi - lo) or 1
-    n = len(series)
-    pts = []
-    for i, v in enumerate(series):
-        x = pad + (w - 2 * pad) * (i / (n - 1))
-        y = pad + (h - 2 * pad) * (1 - (v - lo) / rng)
-        pts.append(f"{x:.1f},{y:.1f}")
-    color = ("#1a7f37" if series[-1] < series[0]
-             else "#c0392b" if series[-1] > series[0] else "#86868b")
-    lx, ly = pts[-1].split(",")
-    return (f'<svg class="spark" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
-            f'<polyline points="{" ".join(pts)}" fill="none" stroke="{color}" '
-            f'stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'
-            f'<circle cx="{lx}" cy="{ly}" r="2" fill="{color}"/></svg>')
-
-
 def write_dashboard(results, stats_map, mock_mode):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     mode = ('<span class="badge mock">목업 데이터</span>' if mock_mode
@@ -544,7 +519,7 @@ def write_dashboard(results, stats_map, mock_mode):
         elif best:
             mall = html.escape(best["mall"])
             link = best["link"]
-            price_html = (f'<b class="hit">{cur:,}원</b> 📉' if is_low
+            price_html = (f'<b class="hit">{cur:,}원</b>' if is_low
                           else f'{cur:,}원')
         else:
             price_html = '<span class="err">결과 없음</span>'
@@ -588,16 +563,15 @@ def write_dashboard(results, stats_map, mock_mode):
         else:
             delta_html = '<span class="prod">첫 기록</span>'
 
-        # 역대 최저 / 30일 평균
+        # 역대 최저 / 30일 평균 (가격만, 부가 표기 없음)
         if stats:
-            low_html = f'{stats["min"]:,}원<div class="prod">{stats["min_date"]}</div>'
-            avg_html = f'{stats["avg"]:,}원<div class="prod">{stats["days"]}일 기록</div>'
+            low_html = f'{stats["min"]:,}원'
+            avg_html = f'{stats["avg"]:,}원'
         else:
             low_html = "-"
-            avg_html = '<span class="prod">기록 시작</span>'
+            avg_html = "-"
 
-        # 추이(스파크라인) + 정렬용 값
-        spark_html = sparkline_svg(stats["series"]) if stats else '<span class="prod">–</span>'
+        # 정렬용 값
         price_sort = cur if cur is not None else 99999999
         delta_sort = (cur - stats["prev"]) if (best and stats and stats.get("prev") is not None) else 0
 
@@ -611,7 +585,6 @@ def write_dashboard(results, stats_map, mock_mode):
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
             f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
-            f'<td class="avg" data-label="추이"><span class="cv">{spark_html}</span></td>'
             "</tr>"
         )
 
