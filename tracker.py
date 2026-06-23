@@ -23,13 +23,14 @@ import time
 import urllib.request
 import urllib.parse
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE, "config.json")
 OUTPUT_HTML = os.path.join(BASE, "dashboard.html")
 HISTORY_CSV = os.path.join(BASE, "history.csv")
 NAVER_SHOP_URL = "https://openapi.naver.com/v1/search/shop.json"
+KST = timezone(timedelta(hours=9))   # 클라우드 러너는 UTC라 한국시간으로 표기/기록
 
 
 # ---------------------------------------------------------------- 설정/유틸
@@ -157,7 +158,7 @@ def mock_result(item):
 
 def log_history(results):
     """이번 실행의 최저가를 history.csv 에 한 줄씩 추가 (매일 누적)"""
-    now = datetime.now()
+    now = datetime.now(KST)
     date = now.strftime("%Y-%m-%d")
     ts = now.strftime("%Y-%m-%d %H:%M")
     exists = os.path.exists(HISTORY_CSV)
@@ -336,7 +337,7 @@ PAGE = """<!DOCTYPE html>
   }
 </style></head><body>
 <h1>🥬 식재료 최저가</h1>
-<div class="meta">__UPDATED__ 기준 · __MODE__</div>
+<div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div>
 <div class="summary">__SUMMARY__</div>
 <div class="tabs">__TABS__</div>
 <table>
@@ -362,7 +363,7 @@ PAGE = """<!DOCTYPE html>
 
 
 def write_dashboard(results, stats_map, mock_mode):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
     mode = ('<span class="badge mock">목업 데이터</span>' if mock_mode
             else '<span class="badge live">실시간 · 네이버 쇼핑</span>')
     cheaper = pricier = lows = 0
