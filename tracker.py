@@ -313,6 +313,9 @@ PAGE = """<!DOCTYPE html>
   th { background: #f5f5f7; font-size: 12px; color: #6e6e73; text-transform: uppercase; letter-spacing: .03em; }
   tr:last-child td { border-bottom: none; }
   .name { font-weight: 600; }
+  .nhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .nm { font-weight: 600; }
+  .np { font-variant-numeric: tabular-nums; font-weight: 700; flex: none; }
   .price { font-variant-numeric: tabular-nums; }
   .hit { color: #1a7f37; }
   .target { color: #6e6e73; font-variant-numeric: tabular-nums; }
@@ -372,7 +375,7 @@ PAGE = """<!DOCTYPE html>
 </div>
 <table>
   <thead><tr>
-    <th>품목</th><th>오늘 가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th><th>쇼핑몰</th><th>링크</th>
+    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>추이</th><th>쇼핑몰</th><th>링크</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -535,8 +538,9 @@ def write_dashboard(results, stats_map, mock_mode):
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
             f'data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
-            f'<td class="name">{name}<div class="prod">{prod}</div>{alts_html}</td>'
-            f'<td class="price" data-label="오늘 가격"><span class="cv">{price_html}</span></td>'
+            f'<td class="name">'
+            f'<div class="nhead"><span class="nm">{name}</span><span class="np">{price_html}</span></div>'
+            f'<div class="prod">{prod}</div>{alts_html}</td>'
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
             f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
