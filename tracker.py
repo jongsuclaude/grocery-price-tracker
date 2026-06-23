@@ -110,7 +110,7 @@ def query_naver(item, client_id, client_secret):
                 continue
             raise
 
-    best_clean, best_any = None, None
+    cleans, anys = [], []
     for it in data.get("items", []):
         try:
             price = int(it.get("lprice") or 0)
@@ -134,11 +134,15 @@ def query_naver(item, client_id, client_secret):
             "mall": it.get("mallName") or "쇼핑몰",
             "link": it.get("link") or "",
         }
-        if best_any is None or price < best_any["price"]:
-            best_any = cand
-        if not bait and (best_clean is None or price < best_clean["price"]):
-            best_clean = cand
-    return best_clean or best_any   # 낚시 아닌 단일용량 우선, 없으면 폴백
+        anys.append(cand)
+        if not bait:
+            cleans.append(cand)
+    pool = sorted(cleans or anys, key=lambda c: c["price"])  # 낚시 아닌 단일용량 우선, 없으면 폴백
+    if not pool:
+        return None
+    best = dict(pool[0])
+    best["alts"] = pool[1:5]   # 비슷한 상품(가격순 대안) 최대 4개
+    return best
 
 
 def mock_result(item):
@@ -316,6 +320,11 @@ PAGE = """<!DOCTYPE html>
   .summary { font-size: 15px; margin: 18px 0 8px; }
   .prod { color: #86868b; font-weight: 400; font-size: 12px; margin-top: 3px; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
+  details.alts { margin-top: 5px; }
+  details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
+  .alt { display: block; font-size: 12px; color: #515154; padding: 4px 0 0; text-decoration: none; line-height: 1.4; }
+  .alt .amall { color: #86868b; }
+  .alt.more { color: #0066cc; font-weight: 600; }
   .avg { color: #1d1d1f; font-variant-numeric: tabular-nums; }
   .dn { color: #1a7f37; font-weight: 600; }
   .up { color: #c0392b; font-weight: 600; }
@@ -426,6 +435,22 @@ def write_dashboard(results, stats_map, mock_mode):
         link_html = (f'<a href="{html.escape(link)}" target="_blank">보기 ↗</a>'
                      if link else "-")
 
+        # 비슷한 상품(가격순 대안) + 네이버 검색 더보기
+        alts_html = ""
+        if best and best.get("alts"):
+            lis = "".join(
+                f'<a class="alt" href="{html.escape(a["link"])}" target="_blank">'
+                f'{a["price"]:,}원 · {html.escape(a["title"][:30])} '
+                f'<span class="amall">{html.escape(a["mall"])}</span></a>'
+                for a in best["alts"]
+            )
+            q = urllib.parse.quote(item.get("query", item.get("name", "")))
+            lis += (f'<a class="alt more" target="_blank" '
+                    f'href="https://search.shopping.naver.com/search/all?query={q}">'
+                    f'네이버에서 더 보기 ↗</a>')
+            alts_html = (f'<details class="alts"><summary>비슷한 상품 {len(best["alts"])}개</summary>'
+                         f'{lis}</details>')
+
         # 전일(이전 갱신) 대비 변동
         if best and stats and stats.get("prev") is not None:
             d = cur - stats["prev"]
@@ -448,7 +473,7 @@ def write_dashboard(results, stats_map, mock_mode):
 
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}">'
-            f'<td class="name">{name}<div class="prod">{prod}</div></td>'
+            f'<td class="name">{name}<div class="prod">{prod}</div>{alts_html}</td>'
             f'<td class="price" data-label="오늘 가격">{price_html}</td>'
             f'<td data-label="전일 대비">{delta_html}</td>'
             f'<td class="avg" data-label="역대 최저">{low_html}</td>'
