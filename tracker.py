@@ -323,6 +323,9 @@ PAGE = """<!DOCTYPE html>
   .tab { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
          background: #fff; cursor: pointer; user-select: none; }
   .tab.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  .toggle { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
+            background: #fff; cursor: pointer; user-select: none; display: inline-block; margin-bottom: 14px; }
+  .toggle.active { background: #1a7f37; color: #fff; border-color: #1a7f37; }
   @media (max-width: 640px) {
     body { margin: 14px auto; }
     h1 { font-size: 21px; }
@@ -340,6 +343,7 @@ PAGE = """<!DOCTYPE html>
 <div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div>
 <div class="summary">__SUMMARY__</div>
 <div class="tabs">__TABS__</div>
+<span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
 <table>
   <thead><tr>
     <th>품목</th><th>오늘 가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th><th>쇼핑몰</th><th>링크</th>
@@ -349,14 +353,26 @@ PAGE = """<!DOCTYPE html>
 <p class="note">※ 검색어 기준 최저가예요. 가공·중량·옵션(예: 냉동 다이스, 500g 옵션) 차이로 실제와 다를 수 있어요.
 품목 아래 회색 글씨가 실제 매칭된 상품이니 같이 확인하세요.</p>
 <script>
+  var activeCat = '전체', dropOnly = false;
+  function applyFilter() {
+    document.querySelectorAll('tbody tr').forEach(function (tr) {
+      var okCat = (activeCat === '전체' || tr.dataset.cat === activeCat);
+      var okDrop = (!dropOnly || tr.dataset.drop === 'y');
+      tr.style.display = (okCat && okDrop) ? '' : 'none';
+    });
+  }
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () {
-      var cat = t.dataset.cat;
+      activeCat = t.dataset.cat;
       document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === t); });
-      document.querySelectorAll('tbody tr').forEach(function (tr) {
-        tr.style.display = (cat === '전체' || tr.dataset.cat === cat) ? '' : 'none';
-      });
+      applyFilter();
     });
+  });
+  var dt = document.getElementById('dropToggle');
+  if (dt) dt.addEventListener('click', function () {
+    dropOnly = !dropOnly;
+    dt.classList.toggle('active', dropOnly);
+    applyFilter();
   });
 </script>
 </body></html>"""
@@ -392,6 +408,8 @@ def write_dashboard(results, stats_map, mock_mode):
         stats = stats_map.get(item.get("name", "?"))
         cur = best["price"] if best else None
         is_low = bool(best and stats and cur <= stats["min"])  # 오늘이 역대 최저면 강조
+        dropped = bool(best and stats and stats.get("prev") is not None
+                       and cur < stats["prev"])  # 어제보다 싸짐
 
         if error:
             price_html = f'<span class="err">조회실패: {html.escape(error)}</span>'
@@ -429,7 +447,7 @@ def write_dashboard(results, stats_map, mock_mode):
             avg_html = '<span class="prod">기록 시작</span>'
 
         rows.append(
-            f'<tr data-cat="{cat}">'
+            f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}">'
             f'<td class="name">{name}<div class="prod">{prod}</div></td>'
             f'<td class="price" data-label="오늘 가격">{price_html}</td>'
             f'<td data-label="전일 대비">{delta_html}</td>'
