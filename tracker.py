@@ -364,8 +364,10 @@ PAGE = """<!DOCTYPE html>
   :root { color-scheme: light dark; }
   body { font-family: -apple-system, system-ui, sans-serif; max-width: 860px;
          margin: 32px auto; padding: 0 16px; color: #1d1d1f; background: #fbfbfd; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .meta { color: #6e6e73; font-size: 13px; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0; }
+  .meta { color: #6e6e73; font-size: 13px; }
+  .hdr { display: flex; justify-content: space-between; align-items: baseline;
+         gap: 8px 12px; flex-wrap: wrap; margin-bottom: 16px; }
   .badge { display: inline-block; padding: 2px 9px; border-radius: 999px;
            font-size: 12px; font-weight: 600; }
   .live { background: #e3f6e9; color: #1a7f37; }
@@ -401,9 +403,11 @@ PAGE = """<!DOCTYPE html>
   .avg { color: #1d1d1f; font-variant-numeric: tabular-nums; }
   .dn { color: #1a7f37; font-weight: 600; }
   .up { color: #c0392b; font-weight: 600; }
-  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 14px; }
+  .tabs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 10px 0 14px;
+          -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
   .tab { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
-         background: #fff; cursor: pointer; user-select: none; }
+         background: #fff; cursor: pointer; user-select: none; flex: none; white-space: nowrap; }
   .tab.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
   .toggle { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid #ddd;
             background: #fff; cursor: pointer; user-select: none; display: inline-block; }
@@ -431,8 +435,8 @@ PAGE = """<!DOCTYPE html>
     td[data-label="전일 대비"] { margin-top: 9px; padding-top: 9px; border-top: 1px solid #f2f2f4; }
   }
 </style></head><body>
-<h1>🥬 식재료 최저가</h1>
-<div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div>
+<div class="hdr"><h1>🥬 식재료 최저가</h1>
+  <div class="meta">__UPDATED__ (KST) 기준 · __MODE__</div></div>
 <div class="summary">__SUMMARY__</div>
 <div class="tabs">__TABS__</div>
 <div class="controls">
@@ -533,7 +537,7 @@ def write_dashboard(results, stats_map, mock_mode):
                 cheaper += 1
             elif b["price"] > s["prev"]:
                 pricier += 1
-    summary = (f'총 <b>{len(results)}</b>개 · 매일 오전 10시 갱신 · '
+    summary = (f'매일 오전 10시 갱신 · '
                f'전일 대비 <span class="dn">▼{cheaper}</span> / <span class="up">▲{pricier}</span>'
                f' · 역대최저 <b>{lows}</b>개')
 
