@@ -101,6 +101,27 @@ def is_major(mall):
     return any(k in ml for k in MAJOR_MALLS)
 
 
+def mall_group(mall):
+    """세부 몰 이름을 '한 장바구니(유통사)' 단위로 묶음 (배송료 합산되는 단위)"""
+    m = (mall or "")
+    ml = m.lower()
+    if "홈플" in m:
+        return "홈플러스"
+    if "이마트에브리데이" in m:
+        return "이마트에브리데이"
+    if "이마트몰" in m or "ssg" in ml or "신세계" in m:
+        return "SSG·이마트몰"
+    if "쿠팡" in m:
+        return "쿠팡"
+    if "롯데" in m:
+        return "롯데ON"
+    if "현대" in m or "hmall" in ml:
+        return "현대Hmall"
+    if "농협" in m or "하나로" in m:
+        return "농협하나로"
+    return m
+
+
 def parse_qty(title):
     """제목에서 용량/개수를 추출 → (기준수량, 단위유형). 못 찾으면 None.
     단위유형: 'g'(무게, g기준), 'ml'(부피, ml기준), 'ct'(개수)"""
@@ -218,18 +239,21 @@ def query_naver(item, client_id, client_secret):
     gids = {id(c) for c in grp}
     ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
     best = dict(ordered[0])
-    # 몰별 비교: 같은 크기(grp) 내, 헤드라인 2.5배 이내, 몰별 최저 1개 (베스트 몰 포함)
+    # 유통사 그룹(한 장바구니 기준)별 최저 1개, 헤드라인 2.5배 이내
     best_price = ordered[0]["price"]
-    by_mall = {}
+    by_group = {}
     for c in grp:
         if c["price"] > best_price * 2.5:
             continue
-        if c["mall"] not in by_mall or c["price"] < by_mall[c["mall"]]["price"]:
-            by_mall[c["mall"]] = c
-    by_mall[ordered[0]["mall"]] = ordered[0]          # 베스트 몰은 헤드라인 가격으로
-    malls = sorted(by_mall.values(), key=lambda c: c["price"])
-    best["malls"] = [{"m": c["mall"], "p": c["price"], "l": c["link"]} for c in malls]
-    best["alts"] = [c for c in malls if c["mall"] != ordered[0]["mall"]][:5]
+        g = mall_group(c["mall"])
+        if g not in by_group or c["price"] < by_group[g]["price"]:
+            by_group[g] = c
+    by_group[mall_group(ordered[0]["mall"])] = ordered[0]   # 베스트 그룹은 헤드라인 가격
+    items_sorted = sorted(by_group.items(), key=lambda kv: kv[1]["price"])
+    best["malls"] = [{"m": g, "p": c["price"], "l": c["link"]} for g, c in items_sorted]
+    best_group = mall_group(ordered[0]["mall"])
+    best["alts"] = [{"mall": g, "price": c["price"], "link": c["link"]}
+                    for g, c in items_sorted if g != best_group][:5]
     return best
 
 
@@ -602,7 +626,7 @@ def write_dashboard(results, stats_map, mock_mode):
             price_html = f'<span class="err">조회실패: {html.escape(error)}</span>'
             mall, link = "-", ""
         elif best:
-            mall = html.escape(best["mall"])
+            mall = html.escape(mall_group(best["mall"]))
             link = best["link"]
             price_html = (f'<b class="hit">{cur:,}원</b>' if is_low
                           else f'{cur:,}원')
