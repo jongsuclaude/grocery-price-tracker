@@ -254,6 +254,8 @@ def query_naver(item, client_id, client_secret):
     best_group = mall_group(ordered[0]["mall"])
     best["alts"] = [{"mall": g, "price": c["price"], "link": c["link"]}
                     for g, c in items_sorted if g != best_group][:5]
+    if item.get("no_unit"):
+        best["unit_label"] = ""   # 단가(g당)가 무의미한 품목(김 등)은 단가 숨김
     return best
 
 
@@ -686,7 +688,7 @@ def write_dashboard(results, stats_map, mock_mode):
             "</tr>"
         )
 
-    cat_order = ["채소", "과일", "고기", "계란", "두부", "조미료"]
+    cat_order = ["채소", "과일", "고기", "계란", "두부", "조미료", "가공식품"]
     shown = [r for r in results if r["best"]]
     present = [c for c in cat_order if any(r["item"].get("category") == c for r in shown)]
     for r in shown:

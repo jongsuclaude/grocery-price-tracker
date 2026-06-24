@@ -74,6 +74,12 @@
     { "name": "소금 1kg", "category": "조미료", "query": "소금 1kg", "target_price": 1230, "exclude": ["입욕", "배스", "제설", "사료", "스크럽", "베이킹"] },
     { "name": "설탕 1kg", "category": "조미료", "query": "설탕 1kg", "target_price": 1170, "exclude": ["스크럽", "왁싱"] },
     { "name": "참기름", "category": "조미료", "query": "참기름", "size": "320ml", "target_price": 4900, "exclude": ["혼합", "향"] },
-    { "name": "다진마늘 1kg", "category": "조미료", "query": "다진마늘 1kg", "target_price": 1690, "exclude": ["기계", "프레스"] }
+    { "name": "다진마늘 1kg", "category": "조미료", "query": "다진마늘 1kg", "target_price": 1690, "exclude": ["기계", "프레스"] },
+
+    { "name": "참치캔", "category": "가공식품", "query": "참치", "size": "150g", "target_price": 1480, "exclude": ["김치", "찌개", "액", "비빔", "고추", "쌈", "마요"] },
+    { "name": "도시락김", "category": "가공식품", "query": "도시락김", "size": "5g", "no_unit": true, "target_price": 19890, "exclude": [] },
+    { "name": "만두", "category": "가공식품", "query": "만두", "size": "1kg", "target_price": 8150, "exclude": ["피"] },
+    { "name": "어묵", "category": "가공식품", "query": "어묵", "size": "500g", "target_price": 5280, "exclude": ["탕", "우동"] },
+    { "name": "포기김치", "category": "가공식품", "query": "포기김치", "size": "3kg", "target_price": 22580, "exclude": [] }
   ]
 }
