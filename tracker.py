@@ -188,7 +188,7 @@ def query_naver(item, client_id, client_secret):
         return None
     for c in pool:                       # 후보별 단가(그램당/개당) 계산 — 표시용
         q = parse_qty(c["title"])
-        if q:
+        if q and q[0] > 0:
             amt, ut = q
             c["amount"], c["utype"] = amt, ut
             c["unit_key"] = c["price"] / amt
