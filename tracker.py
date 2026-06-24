@@ -507,13 +507,16 @@ PAGE = """<!DOCTYPE html>
       var okMall = (activeMall === '전체' || entry !== null);
       tr.style.display = (okCat && okDrop && okMall) ? '' : 'none';
       var main = tr.querySelector('.npmain'), unit = tr.querySelector('.npunit'),
-          badge = tr.querySelector('.npbadge'), pl = tr.querySelector('.prodlink');
+          badge = tr.querySelector('.npbadge'), pl = tr.querySelector('.prodlink'),
+          plm = tr.querySelector('.plmall'), cmp = tr.querySelector('.cmp');
       if (!main) return;
       if (activeMall === '전체') {
         main.textContent = won(parseInt(tr.dataset.best, 10));
         unit.textContent = tr.dataset.unit || ''; unit.style.display = '';
         badge.textContent = ''; badge.className = 'npbadge';
         if (pl && tr.dataset.link) pl.href = tr.dataset.link;
+        if (plm) plm.textContent = tr.dataset.bestmall || '';
+        if (cmp) cmp.style.display = '';
       } else if (entry) {
         main.textContent = won(entry.p);
         unit.style.display = 'none';
@@ -521,6 +524,8 @@ PAGE = """<!DOCTYPE html>
         if (diff <= 0) { badge.textContent = '✓ 최저가'; badge.className = 'npbadge best'; }
         else { badge.textContent = '+' + diff.toLocaleString() + '원'; badge.className = 'npbadge over'; }
         if (pl && entry.l) pl.href = entry.l;
+        if (plm) plm.textContent = activeMall;
+        if (cmp) cmp.style.display = 'none';
       }
     });
   }
@@ -604,7 +609,8 @@ def write_dashboard(results, stats_map, mock_mode):
 
         # 매칭 상품 + 쇼핑몰 + 링크를 한 줄 클릭 링크로 통합
         if best:
-            inner = f'{prod} · {mall}' if prod else mall
+            mall_span = f'<span class="plmall">{mall}</span>'
+            inner = f'{prod} · {mall_span}' if prod else mall_span
             prod_line = (f'<a class="prodlink" href="{html.escape(link)}" target="_blank">{inner} ↗</a>'
                          if link else f'<div class="prod">{inner}</div>')
         else:
@@ -649,7 +655,8 @@ def write_dashboard(results, stats_map, mock_mode):
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
             f'data-major="{major_flag}" data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}" '
-            f'data-malls="{malls_json}" data-best="{cur}" data-unit="{unit_text}" data-link="{html.escape(link)}">'
+            f'data-malls="{malls_json}" data-best="{cur}" data-unit="{unit_text}" '
+            f'data-link="{html.escape(link)}" data-bestmall="{mall}">'
             f'<td class="name">'
             f'<div class="nhead"><span class="nm">{name}</span>'
             f'<span class="np">{np_html}</span></div>'
