@@ -161,24 +161,31 @@ def query_naver(item, client_id, client_secret):
     tokens = query.lower().split()
     block = BLOCK_WORDS + item.get("exclude", [])  # config 에서 품목별 추가 제외어 가능
 
-    params = urllib.parse.urlencode({"query": query, "display": 100, "sort": "sim"})
-    req = urllib.request.Request(NAVER_SHOP_URL + "?" + params)
-    req.add_header("X-Naver-Client-Id", client_id)
-    req.add_header("X-Naver-Client-Secret", client_secret)
-    data = None
-    for attempt in range(4):  # 429(요청 과다) 시 백오프 후 재시도
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
+    all_items = []
+    for start in (1, 101, 201):           # 상위 300위까지 페이지 넘겨서 조회
+        params = urllib.parse.urlencode(
+            {"query": query, "display": 100, "start": start, "sort": "sim"})
+        req = urllib.request.Request(NAVER_SHOP_URL + "?" + params)
+        req.add_header("X-Naver-Client-Id", client_id)
+        req.add_header("X-Naver-Client-Secret", client_secret)
+        data = None
+        for attempt in range(4):          # 429(요청 과다) 시 백오프 후 재시도
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < 3:
+                    time.sleep(0.6 * (attempt + 1))
+                    continue
+                raise
+        page = (data or {}).get("items", [])
+        all_items += page
+        if len(page) < 100:               # 더 이상 결과 없으면 중단
             break
-        except urllib.error.HTTPError as e:
-            if e.code == 429 and attempt < 3:
-                time.sleep(0.6 * (attempt + 1))
-                continue
-            raise
 
     cleans, anys = [], []
-    for it in data.get("items", []):
+    for it in all_items:
         try:
             price = int(it.get("lprice") or 0)
         except ValueError:
