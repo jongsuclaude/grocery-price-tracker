@@ -454,6 +454,7 @@ PAGE = """<!DOCTYPE html>
   .npbadge { font-size: 11px; font-weight: 600; }
   .npbadge.best { color: #1a7f37; }
   .npbadge.over { color: #c0392b; }
+  table.mallmode .stat { display: none; }
   @media (max-width: 640px) {
     body { margin: 12px auto; }
     h1 { font-size: 20px; }
@@ -484,7 +485,7 @@ PAGE = """<!DOCTYPE html>
 <div class="mallbar"><span class="mlabel">🛒 한 몰에서 사기</span>__MALLS__</div>
 <table>
   <thead><tr>
-    <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th>
+    <th>품목 · 오늘가격</th><th class="stat">전일 대비</th><th class="stat">역대 최저</th><th class="stat">30일 평균</th>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
@@ -495,6 +496,8 @@ PAGE = """<!DOCTYPE html>
   var activeCat = '전체', dropOnly = false, activeMall = '전체';
   function won(n) { return n.toLocaleString() + '원'; }
   function applyFilter() {
+    var tbl = document.querySelector('table');
+    if (tbl) tbl.classList.toggle('mallmode', activeMall !== '전체');
     document.querySelectorAll('tbody tr').forEach(function (tr) {
       var malls = []; try { malls = JSON.parse(tr.dataset.malls || '[]'); } catch (e) {}
       var minP = Infinity, entry = null;
@@ -661,9 +664,9 @@ def write_dashboard(results, stats_map, mock_mode):
             f'<div class="nhead"><span class="nm">{name}</span>'
             f'<span class="np">{np_html}</span></div>'
             f'{prod_line}{alts_html}</td>'
-            f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
-            f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
-            f'<td class="avg" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
+            f'<td class="stat" data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
+            f'<td class="avg stat" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
+            f'<td class="avg stat" data-label="30일 평균"><span class="cv">{avg_html}</span></td>'
             "</tr>"
         )
 
