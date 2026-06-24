@@ -88,6 +88,19 @@ BLOCK_WORDS = [
 ]
 
 
+# 대형 쇼핑몰(자체배송·무료배송 기준) — 작은 스마트스토어는 배송비로 표시가가 의미없어 제외
+MAJOR_MALLS = [
+    "이마트", "홈플러스", "쿠팡", "마켓컬리", "롯데마트", "롯데슈퍼", "롯데on", "롯데온",
+    "ssg", "신세계몰", "gs the fresh", "gs프레시", "gs프레쉬", "현대hmall",
+    "농협몰", "하나로마트", "오아시스마켓",
+]
+
+
+def is_major(mall):
+    ml = (mall or "").lower()
+    return any(k in ml for k in MAJOR_MALLS)
+
+
 def parse_qty(title):
     """제목에서 용량/개수를 추출 → (기준수량, 단위유형). 못 찾으면 None.
     단위유형: 'g'(무게, g기준), 'ml'(부피, ml기준), 'ct'(개수)"""
@@ -200,11 +213,15 @@ def query_naver(item, client_id, client_secret):
     if band:
         utypes = [c["utype"] for c in band]
         dom = max(set(utypes), key=utypes.count)                     # 같은 단위끼리 비교
-        grp = sorted((c for c in band if c["utype"] == dom), key=lambda c: c["unit_key"])
+        grp = [c for c in band if c["utype"] == dom]
+        # 기준 크기 범위 안에서 대형몰 먼저, 그 안에서 단가(그램당) 싼 순
+        grp.sort(key=lambda c: (0 if is_major(c["mall"]) else 1, c["unit_key"]))
         gids = {id(c) for c in grp}
-        ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
+        rest = sorted((c for c in pool if id(c) not in gids),
+                      key=lambda c: (0 if is_major(c["mall"]) else 1, c["price"]))
+        ordered = grp + rest
     else:
-        ordered = sorted(pool, key=lambda c: c["price"])             # 범위 후보 없으면 절대 최저가
+        ordered = sorted(pool, key=lambda c: (0 if is_major(c["mall"]) else 1, c["price"]))
     best = dict(ordered[0])
     best["alts"] = ordered[1:6]   # 비슷한 상품(대안) 최대 5개
     return best
@@ -438,6 +455,7 @@ PAGE = """<!DOCTYPE html>
 <div class="tabs">__TABS__</div>
 <div class="controls">
   <span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
+  <span class="toggle" id="majorToggle">🏬 대형몰만</span>
   <span class="sortbar">정렬
     <span class="sort active" data-sort="idx">기본</span>
     <span class="sort" data-sort="price">가격 낮은순</span>
@@ -453,12 +471,13 @@ PAGE = """<!DOCTYPE html>
 <p class="note">※ 검색어 기준 최저가예요. 가공·중량·옵션(예: 냉동 다이스, 500g 옵션) 차이로 실제와 다를 수 있어요.
 품목 아래 회색 글씨가 실제 매칭된 상품이니 같이 확인하세요.</p>
 <script>
-  var activeCat = '전체', dropOnly = false;
+  var activeCat = '전체', dropOnly = false, majorOnly = false;
   function applyFilter() {
     document.querySelectorAll('tbody tr').forEach(function (tr) {
       var okCat = (activeCat === '전체' || tr.dataset.cat === activeCat);
       var okDrop = (!dropOnly || tr.dataset.drop === 'y');
-      tr.style.display = (okCat && okDrop) ? '' : 'none';
+      var okMajor = (!majorOnly || tr.dataset.major === 'y');
+      tr.style.display = (okCat && okDrop && okMajor) ? '' : 'none';
     });
   }
   document.querySelectorAll('.tab').forEach(function (t) {
@@ -472,6 +491,12 @@ PAGE = """<!DOCTYPE html>
   if (dt) dt.addEventListener('click', function () {
     dropOnly = !dropOnly;
     dt.classList.toggle('active', dropOnly);
+    applyFilter();
+  });
+  var mt = document.getElementById('majorToggle');
+  if (mt) mt.addEventListener('click', function () {
+    majorOnly = !majorOnly;
+    mt.classList.toggle('active', majorOnly);
     applyFilter();
   });
   function sortRows(mode) {
@@ -574,10 +599,11 @@ def write_dashboard(results, stats_map, mock_mode):
         # 정렬용 값
         price_sort = cur if cur is not None else 99999999
         delta_sort = (cur - stats["prev"]) if (best and stats and stats.get("prev") is not None) else 0
+        major_flag = "y" if (best and is_major(best["mall"])) else "n"
 
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
-            f'data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
+            f'data-major="{major_flag}" data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
             f'<td class="name">'
             f'<div class="nhead"><span class="nm">{name}</span>'
             f'<span class="np">{price_html}{unit_top}</span></div>'
