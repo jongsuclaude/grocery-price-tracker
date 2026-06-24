@@ -416,7 +416,7 @@ PAGE = """<!DOCTYPE html>
   details.cmp { margin-top: 5px; }
   details.cmp summary { font-size: 12px; color: #0066cc; cursor: pointer; }
   .cmpbody { font-size: 12px; color: #515154; margin-top: 4px; line-height: 1.7; }
-  .cmpbody .alt { color: #0066cc; text-decoration: none; white-space: nowrap; }
+  .cmpbody .alt { display: block; color: #0066cc; text-decoration: none; padding: 1px 0; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
@@ -563,7 +563,7 @@ def write_dashboard(results, stats_map, mock_mode):
         # 다른 대형몰 가격 비교(몰별 1개)
         alts_html = ""
         if best and best.get("alts"):
-            chips = " · ".join(
+            chips = "".join(
                 f'<a class="alt" target="_blank" href="{html.escape(a["link"])}">'
                 f'{html.escape(a["mall"])} <b>{a["price"]:,}원</b></a>'
                 for a in best["alts"]
