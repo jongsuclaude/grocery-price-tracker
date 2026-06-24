@@ -140,7 +140,7 @@ def query_naver(item, client_id, client_secret):
     tokens = query.lower().split()
     block = BLOCK_WORDS + item.get("exclude", [])  # config 에서 품목별 추가 제외어 가능
 
-    params = urllib.parse.urlencode({"query": query, "display": 40, "sort": "sim"})
+    params = urllib.parse.urlencode({"query": query, "display": 100, "sort": "sim"})
     req = urllib.request.Request(NAVER_SHOP_URL + "?" + params)
     req.add_header("X-Naver-Client-Id", client_id)
     req.add_header("X-Naver-Client-Secret", client_secret)
