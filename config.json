@@ -47,6 +47,12 @@
     { "name": "소불고기 (양념)", "category": "고기", "query": "소불고기", "size": "500g", "target_price": 21990, "exclude": [] },
     { "name": "훈제오리", "category": "고기", "query": "훈제오리", "size": "600g", "target_price": 17980, "exclude": [] },
     { "name": "베이컨", "category": "고기", "query": "베이컨", "size": "500g", "target_price": 4980, "exclude": ["칩"] },
+    { "name": "제육볶음 (양념)", "category": "고기", "query": "제육볶음", "size": "500g", "target_price": 3200, "exclude": ["덮밥", "밀키트"] },
+    { "name": "비엔나소시지", "category": "고기", "query": "비엔나", "size": "500g", "target_price": 9460, "exclude": [] },
+    { "name": "런천미트", "category": "고기", "query": "런천미트", "size": "340g", "target_price": 2390, "exclude": [] },
+    { "name": "스팸", "category": "고기", "query": "스팸", "size": "340g", "target_price": 6090, "exclude": ["선물"] },
+    { "name": "동그랑땡", "category": "고기", "query": "동그랑땡", "size": "500g", "target_price": 9280, "exclude": [] },
+    { "name": "함박스테이크", "category": "고기", "query": "함박스테이크", "size": "1kg", "target_price": 19730, "exclude": [] },
 
     { "name": "계란 대란 1판(30구)", "category": "계란", "query": "계란 대란 30구", "target_price": 11900, "exclude": ["도매"] },
     { "name": "계란 특란 1판(30구)", "category": "계란", "query": "계란 특란 30구", "target_price": 8900, "exclude": ["도매"] },

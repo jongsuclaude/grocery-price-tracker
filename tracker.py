@@ -497,16 +497,15 @@ PAGE = """<!DOCTYPE html>
 </style></head><body>
 <div class="hdr"><h1>🥬 식재료 최저가</h1>
   <div class="meta">__UPDATED__ (KST)<br>매일 오전 10시 갱신</div></div>
+<div class="mallbar"><span class="mlabel">🛒 한 몰에서 사기</span>__MALLS__</div>
 <div class="tabs">__TABS__</div>
 <div class="controls">
-  <span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
   <span class="sortbar">정렬
     <span class="sort active" data-sort="idx">기본</span>
     <span class="sort" data-sort="price">가격 낮은순</span>
     <span class="sort" data-sort="drop">낙폭순</span>
   </span>
 </div>
-<div class="mallbar"><span class="mlabel">🛒 한 몰에서 사기</span>__MALLS__</div>
 <table>
   <thead><tr>
     <th>품목 · 오늘가격</th><th class="stat">전일 대비</th><th class="stat">역대 최저</th><th class="stat">30일 평균</th>
@@ -517,7 +516,7 @@ PAGE = """<!DOCTYPE html>
 (소형 스마트스토어는 배송비 변수로 제외 — 그래서 대형몰에 없는 품목은 안 보여요).
 가공·중량·옵션 차이가 있을 수 있으니 품목 아래 상품명도 같이 확인하세요.</p>
 <script>
-  var activeCat = '전체', dropOnly = false, activeMall = '전체';
+  var activeCat = '전체', activeMall = '전체';
   function won(n) { return n.toLocaleString() + '원'; }
   function applyFilter() {
     var tbl = document.querySelector('table');
@@ -530,9 +529,8 @@ PAGE = """<!DOCTYPE html>
         for (var i = 0; i < malls.length; i++) { if (malls[i].m === activeMall) { entry = malls[i]; break; } }
       }
       var okCat = (activeCat === '전체' || tr.dataset.cat === activeCat);
-      var okDrop = (!dropOnly || tr.dataset.drop === 'y');
       var okMall = (activeMall === '전체' || entry !== null);
-      tr.style.display = (okCat && okDrop && okMall) ? '' : 'none';
+      tr.style.display = (okCat && okMall) ? '' : 'none';
       var main = tr.querySelector('.npmain'), unit = tr.querySelector('.npunit'),
           badge = tr.querySelector('.npbadge'), pl = tr.querySelector('.prodlink'),
           plm = tr.querySelector('.plmall'), cmp = tr.querySelector('.cmp');
@@ -569,12 +567,6 @@ PAGE = """<!DOCTYPE html>
       document.querySelectorAll('.mall').forEach(function (x) { x.classList.toggle('active', x === mc); });
       applyFilter();
     });
-  });
-  var dt = document.getElementById('dropToggle');
-  if (dt) dt.addEventListener('click', function () {
-    dropOnly = !dropOnly;
-    dt.classList.toggle('active', dropOnly);
-    applyFilter();
   });
   function sortRows(mode) {
     var tbody = document.querySelector('tbody');
