@@ -82,6 +82,7 @@
     { "name": "어묵", "category": "가공식품", "query": "어묵", "size": "500g", "target_price": 5280, "exclude": ["탕", "우동"] },
     { "name": "포기김치", "category": "가공식품", "query": "포기김치", "size": "3kg", "target_price": 22580, "exclude": [] },
     { "name": "오징어젓", "category": "가공식품", "query": "오징어젓", "size": "1kg", "target_price": 20900, "exclude": [] },
-    { "name": "낙지젓", "category": "가공식품", "query": "낙지젓", "size": "500g", "target_price": 22000, "exclude": [] }
+    { "name": "낙지젓", "category": "가공식품", "query": "낙지젓", "size": "500g", "target_price": 22000, "exclude": [] },
+    { "name": "파래김자반", "category": "가공식품", "query": "파래 김자반", "size": "50g", "target_price": 4200, "exclude": [] }
   ]
 }
