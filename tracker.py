@@ -183,7 +183,7 @@ def query_naver(item, client_id, client_secret):
         anys.append(cand)
         if not bait:
             cleans.append(cand)
-    pool = cleans or anys
+    pool = [c for c in (cleans or anys) if is_major(c["mall"])]   # 대형몰만 고려 (소형몰 제외)
     if not pool:
         return None
     for c in pool:                       # 후보별 단가(그램당/개당) 계산 — 표시용
@@ -207,21 +207,16 @@ def query_naver(item, client_id, client_secret):
         if not (anchor and c["amount"] and c["utype"]):
             return False
         a_amt, a_ut = anchor
-        return c["utype"] == a_ut and a_amt * 0.5 <= c["amount"] <= a_amt * 1.5
+        return c["utype"] == a_ut and a_amt * 0.4 <= c["amount"] <= a_amt * 2.5
 
     band = [c for c in pool if in_band(c)]
-    if band:
-        utypes = [c["utype"] for c in band]
-        dom = max(set(utypes), key=utypes.count)                     # 같은 단위끼리 비교
-        grp = [c for c in band if c["utype"] == dom]
-        # 기준 크기 범위 안에서 대형몰 먼저, 그 안에서 단가(그램당) 싼 순
-        grp.sort(key=lambda c: (0 if is_major(c["mall"]) else 1, c["unit_key"]))
-        gids = {id(c) for c in grp}
-        rest = sorted((c for c in pool if id(c) not in gids),
-                      key=lambda c: (0 if is_major(c["mall"]) else 1, c["price"]))
-        ordered = grp + rest
-    else:
-        ordered = sorted(pool, key=lambda c: (0 if is_major(c["mall"]) else 1, c["price"]))
+    if not band:
+        return None                              # 대형몰에 기준 크기 매물 없으면 노출 안 함
+    utypes = [c["utype"] for c in band]
+    dom = max(set(utypes), key=utypes.count)
+    grp = sorted((c for c in band if c["utype"] == dom), key=lambda c: c["unit_key"])
+    gids = {id(c) for c in grp}
+    ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
     best = dict(ordered[0])
     best["alts"] = ordered[1:6]   # 비슷한 상품(대안) 최대 5개
     return best
@@ -455,7 +450,6 @@ PAGE = """<!DOCTYPE html>
 <div class="tabs">__TABS__</div>
 <div class="controls">
   <span class="toggle" id="dropToggle">📉 어제보다 싸진 것만</span>
-  <span class="toggle" id="majorToggle">🏬 대형몰만</span>
   <span class="sortbar">정렬
     <span class="sort active" data-sort="idx">기본</span>
     <span class="sort" data-sort="price">가격 낮은순</span>
@@ -468,16 +462,16 @@ PAGE = """<!DOCTYPE html>
   </tr></thead>
   <tbody>__ROWS__</tbody>
 </table>
-<p class="note">※ 검색어 기준 최저가예요. 가공·중량·옵션(예: 냉동 다이스, 500g 옵션) 차이로 실제와 다를 수 있어요.
-품목 아래 회색 글씨가 실제 매칭된 상품이니 같이 확인하세요.</p>
+<p class="note">※ 이마트몰·홈플러스·쿠팡·롯데·컬리·SSG·농협몰 등 대형몰에 올라온 품목만 표시해요
+(소형 스마트스토어는 배송비 변수로 제외 — 그래서 대형몰에 없는 품목은 안 보여요).
+가공·중량·옵션 차이가 있을 수 있으니 품목 아래 상품명도 같이 확인하세요.</p>
 <script>
-  var activeCat = '전체', dropOnly = false, majorOnly = false;
+  var activeCat = '전체', dropOnly = false;
   function applyFilter() {
     document.querySelectorAll('tbody tr').forEach(function (tr) {
       var okCat = (activeCat === '전체' || tr.dataset.cat === activeCat);
       var okDrop = (!dropOnly || tr.dataset.drop === 'y');
-      var okMajor = (!majorOnly || tr.dataset.major === 'y');
-      tr.style.display = (okCat && okDrop && okMajor) ? '' : 'none';
+      tr.style.display = (okCat && okDrop) ? '' : 'none';
     });
   }
   document.querySelectorAll('.tab').forEach(function (t) {
@@ -491,12 +485,6 @@ PAGE = """<!DOCTYPE html>
   if (dt) dt.addEventListener('click', function () {
     dropOnly = !dropOnly;
     dt.classList.toggle('active', dropOnly);
-    applyFilter();
-  });
-  var mt = document.getElementById('majorToggle');
-  if (mt) mt.addEventListener('click', function () {
-    majorOnly = !majorOnly;
-    mt.classList.toggle('active', majorOnly);
     applyFilter();
   });
   function sortRows(mode) {
@@ -527,6 +515,8 @@ def write_dashboard(results, stats_map, mock_mode):
     rows = []
     for idx, r in enumerate(results):
         item, best, error = r["item"], r["best"], r["error"]
+        if best is None:                         # 대형몰 매물 없는 품목은 노출 안 함
+            continue
         name = html.escape(item.get("name", "?"))
         prod = html.escape(best["title"][:42]) if best else ""
         cat = html.escape(item.get("category", "기타"))
@@ -615,8 +605,9 @@ def write_dashboard(results, stats_map, mock_mode):
         )
 
     cat_order = ["채소", "과일", "고기", "계란", "두부", "조미료"]
-    present = [c for c in cat_order if any(r["item"].get("category") == c for r in results)]
-    for r in results:
+    shown = [r for r in results if r["best"]]
+    present = [c for c in cat_order if any(r["item"].get("category") == c for r in shown)]
+    for r in shown:
         c = r["item"].get("category")
         if c and c not in present:
             present.append(c)
