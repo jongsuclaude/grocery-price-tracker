@@ -218,15 +218,18 @@ def query_naver(item, client_id, client_secret):
     gids = {id(c) for c in grp}
     ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
     best = dict(ordered[0])
-    # 다른 대형몰 비교: 같은 크기(grp)만, 베스트 몰 제외, 묶음 이상치(>2.5배) 제외, 몰별 최저 1개
-    best_price, best_mall = ordered[0]["price"], ordered[0]["mall"]
+    # 몰별 비교: 같은 크기(grp) 내, 헤드라인 2.5배 이내, 몰별 최저 1개 (베스트 몰 포함)
+    best_price = ordered[0]["price"]
     by_mall = {}
     for c in grp:
-        if c["mall"] == best_mall or c["price"] > best_price * 2.5:
+        if c["price"] > best_price * 2.5:
             continue
         if c["mall"] not in by_mall or c["price"] < by_mall[c["mall"]]["price"]:
             by_mall[c["mall"]] = c
-    best["alts"] = sorted(by_mall.values(), key=lambda c: c["price"])[:5]
+    by_mall[ordered[0]["mall"]] = ordered[0]          # 베스트 몰은 헤드라인 가격으로
+    malls = sorted(by_mall.values(), key=lambda c: c["price"])
+    best["malls"] = [{"m": c["mall"], "p": c["price"], "l": c["link"]} for c in malls]
+    best["alts"] = [c for c in malls if c["mall"] != ordered[0]["mall"]][:5]
     return best
 
 
@@ -441,6 +444,16 @@ PAGE = """<!DOCTYPE html>
           background: #fff; cursor: pointer; user-select: none; color: #1d1d1f; }
   .sort.active { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
   .spark { vertical-align: middle; }
+  .mallbar { display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: center; gap: 6px;
+             margin-bottom: 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .mallbar::-webkit-scrollbar { display: none; }
+  .mlabel { font-size: 12px; color: #86868b; flex: none; }
+  .mall { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid #ddd;
+          background: #fff; cursor: pointer; user-select: none; flex: none; white-space: nowrap; }
+  .mall.active { background: #0040a0; color: #fff; border-color: #0040a0; }
+  .npbadge { font-size: 11px; font-weight: 600; }
+  .npbadge.best { color: #1a7f37; }
+  .npbadge.over { color: #c0392b; }
   @media (max-width: 640px) {
     body { margin: 12px auto; }
     h1 { font-size: 20px; }
@@ -468,6 +481,7 @@ PAGE = """<!DOCTYPE html>
     <span class="sort" data-sort="drop">낙폭순</span>
   </span>
 </div>
+<div class="mallbar"><span class="mlabel">🛒 한 몰에서 사기</span>__MALLS__</div>
 <table>
   <thead><tr>
     <th>품목 · 오늘가격</th><th>전일 대비</th><th>역대 최저</th><th>30일 평균</th>
@@ -478,18 +492,49 @@ PAGE = """<!DOCTYPE html>
 (소형 스마트스토어는 배송비 변수로 제외 — 그래서 대형몰에 없는 품목은 안 보여요).
 가공·중량·옵션 차이가 있을 수 있으니 품목 아래 상품명도 같이 확인하세요.</p>
 <script>
-  var activeCat = '전체', dropOnly = false;
+  var activeCat = '전체', dropOnly = false, activeMall = '전체';
+  function won(n) { return n.toLocaleString() + '원'; }
   function applyFilter() {
     document.querySelectorAll('tbody tr').forEach(function (tr) {
+      var malls = []; try { malls = JSON.parse(tr.dataset.malls || '[]'); } catch (e) {}
+      var minP = Infinity, entry = null;
+      malls.forEach(function (x) { if (x.p < minP) minP = x.p; });
+      if (activeMall !== '전체') {
+        for (var i = 0; i < malls.length; i++) { if (malls[i].m === activeMall) { entry = malls[i]; break; } }
+      }
       var okCat = (activeCat === '전체' || tr.dataset.cat === activeCat);
       var okDrop = (!dropOnly || tr.dataset.drop === 'y');
-      tr.style.display = (okCat && okDrop) ? '' : 'none';
+      var okMall = (activeMall === '전체' || entry !== null);
+      tr.style.display = (okCat && okDrop && okMall) ? '' : 'none';
+      var main = tr.querySelector('.npmain'), unit = tr.querySelector('.npunit'),
+          badge = tr.querySelector('.npbadge'), pl = tr.querySelector('.prodlink');
+      if (!main) return;
+      if (activeMall === '전체') {
+        main.textContent = won(parseInt(tr.dataset.best, 10));
+        unit.textContent = tr.dataset.unit || ''; unit.style.display = '';
+        badge.textContent = ''; badge.className = 'npbadge';
+        if (pl && tr.dataset.link) pl.href = tr.dataset.link;
+      } else if (entry) {
+        main.textContent = won(entry.p);
+        unit.style.display = 'none';
+        var diff = entry.p - minP;
+        if (diff <= 0) { badge.textContent = '✓ 최저가'; badge.className = 'npbadge best'; }
+        else { badge.textContent = '+' + diff.toLocaleString() + '원'; badge.className = 'npbadge over'; }
+        if (pl && entry.l) pl.href = entry.l;
+      }
     });
   }
   document.querySelectorAll('.tab').forEach(function (t) {
     t.addEventListener('click', function () {
       activeCat = t.dataset.cat;
       document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x === t); });
+      applyFilter();
+    });
+  });
+  document.querySelectorAll('.mall').forEach(function (mc) {
+    mc.addEventListener('click', function () {
+      activeMall = mc.dataset.mall;
+      document.querySelectorAll('.mall').forEach(function (x) { x.classList.toggle('active', x === mc); });
       applyFilter();
     });
   });
@@ -537,8 +582,13 @@ def write_dashboard(results, stats_map, mock_mode):
         is_low = bool(best and stats and cur <= stats["min"])  # 오늘이 역대 최저면 강조
         dropped = bool(best and stats and stats.get("prev") is not None
                        and cur < stats["prev"])  # 어제보다 싸짐
-        unit_top = (f'<span class="unit">{html.escape(best["unit_label"])}</span>'
-                    if best and best.get("unit_label") else "")
+        unit_text = html.escape(best["unit_label"]) if best.get("unit_label") else ""
+        npmain_cls = "npmain hit" if is_low else "npmain"
+        np_html = (f'<b class="{npmain_cls}">{cur:,}원</b>'
+                   f'<span class="unit npunit">{unit_text}</span>'
+                   f'<span class="npbadge"></span>')
+        malls_data = best.get("malls") or [{"m": best["mall"], "p": cur, "l": best["link"]}]
+        malls_json = html.escape(json.dumps(malls_data, ensure_ascii=False))
 
         if error:
             price_html = f'<span class="err">조회실패: {html.escape(error)}</span>'
@@ -598,10 +648,11 @@ def write_dashboard(results, stats_map, mock_mode):
 
         rows.append(
             f'<tr data-cat="{cat}" data-drop="{"y" if dropped else "n"}" '
-            f'data-major="{major_flag}" data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}">'
+            f'data-major="{major_flag}" data-price="{price_sort}" data-delta="{delta_sort}" data-idx="{idx}" '
+            f'data-malls="{malls_json}" data-best="{cur}" data-unit="{unit_text}" data-link="{html.escape(link)}">'
             f'<td class="name">'
             f'<div class="nhead"><span class="nm">{name}</span>'
-            f'<span class="np">{price_html}{unit_top}</span></div>'
+            f'<span class="np">{np_html}</span></div>'
             f'{prod_line}{alts_html}</td>'
             f'<td data-label="전일 대비"><span class="cv">{delta_html}</span></td>'
             f'<td class="avg" data-label="역대 최저"><span class="cv">{low_html}</span></td>'
@@ -620,10 +671,21 @@ def write_dashboard(results, stats_map, mock_mode):
     tabs += [f'<span class="tab" data-cat="{html.escape(c)}">{html.escape(c)}</span>'
              for c in present]
 
+    # 몰 필터 칩 (커버리지 많은 순)
+    mall_counts = {}
+    for r in shown:
+        for m in (r["best"].get("malls") or []):
+            mall_counts[m["m"]] = mall_counts.get(m["m"], 0) + 1
+    top_malls = sorted(mall_counts, key=lambda k: -mall_counts[k])[:8]
+    mall_chips = ['<span class="mall active" data-mall="전체">전체</span>']
+    mall_chips += [f'<span class="mall" data-mall="{html.escape(m)}">{html.escape(m)} ({mall_counts[m]})</span>'
+                   for m in top_malls]
+
     page = (PAGE
             .replace("__UPDATED__", now)
             .replace("__MODE__", mode)
             .replace("__TABS__", "".join(tabs))
+            .replace("__MALLS__", "".join(mall_chips))
             .replace("__ROWS__", "\n".join(rows)))
     with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
         f.write(page)
