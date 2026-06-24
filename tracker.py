@@ -413,10 +413,10 @@ PAGE = """<!DOCTYPE html>
   .summary { font-size: 15px; margin: 18px 0 8px; }
   .prod { color: #86868b; font-weight: 400; font-size: 12px; margin-top: 3px; }
   .prodlink { display: block; color: #0066cc; font-size: 12px; margin-top: 4px; text-decoration: none; line-height: 1.4; }
-  .cmp { font-size: 12px; color: #515154; margin-top: 5px; line-height: 1.7; }
-  .cmp .cmpl { color: #86868b; margin-right: 4px; }
-  .cmp .alt { color: #0066cc; text-decoration: none; white-space: nowrap; }
-  .cmpmore { display: inline-block; margin-top: 5px; font-size: 12px; color: #0066cc; text-decoration: none; }
+  details.cmp { margin-top: 5px; }
+  details.cmp summary { font-size: 12px; color: #0066cc; cursor: pointer; }
+  .cmpbody { font-size: 12px; color: #515154; margin-top: 4px; line-height: 1.7; }
+  .cmpbody .alt { color: #0066cc; text-decoration: none; white-space: nowrap; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
@@ -568,7 +568,8 @@ def write_dashboard(results, stats_map, mock_mode):
                 f'{html.escape(a["mall"])} <b>{a["price"]:,}원</b></a>'
                 for a in best["alts"]
             )
-            alts_html = f'<div class="cmp"><span class="cmpl">다른 대형몰</span> {chips}</div>'
+            alts_html = (f'<details class="cmp"><summary>다른 대형몰 {len(best["alts"])}곳</summary>'
+                         f'<div class="cmpbody">{chips}</div></details>')
 
         # 전일(이전 갱신) 대비 변동
         if best and stats and stats.get("prev") is not None:
