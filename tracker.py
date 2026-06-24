@@ -218,7 +218,15 @@ def query_naver(item, client_id, client_secret):
     gids = {id(c) for c in grp}
     ordered = grp + sorted((c for c in pool if id(c) not in gids), key=lambda c: c["price"])
     best = dict(ordered[0])
-    best["alts"] = ordered[1:6]   # 비슷한 상품(대안) 최대 5개
+    # 다른 대형몰 비교: 같은 크기(grp)만, 베스트 몰 제외, 묶음 이상치(>2.5배) 제외, 몰별 최저 1개
+    best_price, best_mall = ordered[0]["price"], ordered[0]["mall"]
+    by_mall = {}
+    for c in grp:
+        if c["mall"] == best_mall or c["price"] > best_price * 2.5:
+            continue
+        if c["mall"] not in by_mall or c["price"] < by_mall[c["mall"]]["price"]:
+            by_mall[c["mall"]] = c
+    best["alts"] = sorted(by_mall.values(), key=lambda c: c["price"])[:5]
     return best
 
 
@@ -405,6 +413,10 @@ PAGE = """<!DOCTYPE html>
   .summary { font-size: 15px; margin: 18px 0 8px; }
   .prod { color: #86868b; font-weight: 400; font-size: 12px; margin-top: 3px; }
   .prodlink { display: block; color: #0066cc; font-size: 12px; margin-top: 4px; text-decoration: none; line-height: 1.4; }
+  .cmp { font-size: 12px; color: #515154; margin-top: 5px; line-height: 1.7; }
+  .cmp .cmpl { color: #86868b; margin-right: 4px; }
+  .cmp .alt { color: #0066cc; text-decoration: none; white-space: nowrap; }
+  .cmpmore { display: inline-block; margin-top: 5px; font-size: 12px; color: #0066cc; text-decoration: none; }
   .note { color: #86868b; font-size: 12px; margin-top: 16px; line-height: 1.6; }
   details.alts { margin-top: 5px; }
   details.alts summary { font-size: 12px; color: #0066cc; cursor: pointer; }
@@ -548,23 +560,19 @@ def write_dashboard(results, stats_map, mock_mode):
         else:
             prod_line = ""
 
-        # 비슷한 상품(가격순 대안) + 네이버 검색 더보기
+        # 다른 대형몰 가격 비교(몰별 1개) + 네이버 가격비교 전체 링크
         alts_html = ""
-        if best and best.get("alts"):
-            lis = "".join(
-                f'<a class="alt" target="_blank" href="{html.escape(a["link"] or ("https://search.shopping.naver.com/search/all?query=" + urllib.parse.quote(a["title"])))}">'
-                f'{a["price"]:,}원'
-                f'{(" · " + html.escape(a["unit_label"])) if a.get("unit_label") else ""}'
-                f' · {html.escape(a["title"][:26])} '
-                f'<span class="amall">{html.escape(a["mall"])}</span> ↗</a>'
-                for a in best["alts"]
-            )
+        if best:
+            if best.get("alts"):
+                chips = " · ".join(
+                    f'<a class="alt" target="_blank" href="{html.escape(a["link"])}">'
+                    f'{html.escape(a["mall"])} <b>{a["price"]:,}원</b></a>'
+                    for a in best["alts"]
+                )
+                alts_html += f'<div class="cmp"><span class="cmpl">다른 대형몰</span> {chips}</div>'
             q = urllib.parse.quote(item.get("query", item.get("name", "")))
-            lis += (f'<a class="alt more" target="_blank" '
-                    f'href="https://search.shopping.naver.com/search/all?query={q}">'
-                    f'네이버에서 더 보기 ↗</a>')
-            alts_html = (f'<details class="alts"><summary>비슷한 상품 {len(best["alts"])}개</summary>'
-                         f'{lis}</details>')
+            alts_html += (f'<a class="cmpmore" target="_blank" '
+                          f'href="https://search.shopping.naver.com/search/all?query={q}">네이버 가격비교 전체 ↗</a>')
 
         # 전일(이전 갱신) 대비 변동
         if best and stats and stats.get("prev") is not None:
