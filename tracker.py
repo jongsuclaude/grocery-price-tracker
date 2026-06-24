@@ -560,19 +560,15 @@ def write_dashboard(results, stats_map, mock_mode):
         else:
             prod_line = ""
 
-        # 다른 대형몰 가격 비교(몰별 1개) + 네이버 가격비교 전체 링크
+        # 다른 대형몰 가격 비교(몰별 1개)
         alts_html = ""
-        if best:
-            if best.get("alts"):
-                chips = " · ".join(
-                    f'<a class="alt" target="_blank" href="{html.escape(a["link"])}">'
-                    f'{html.escape(a["mall"])} <b>{a["price"]:,}원</b></a>'
-                    for a in best["alts"]
-                )
-                alts_html += f'<div class="cmp"><span class="cmpl">다른 대형몰</span> {chips}</div>'
-            q = urllib.parse.quote(item.get("query", item.get("name", "")))
-            alts_html += (f'<a class="cmpmore" target="_blank" '
-                          f'href="https://search.shopping.naver.com/search/all?query={q}">네이버 가격비교 전체 ↗</a>')
+        if best and best.get("alts"):
+            chips = " · ".join(
+                f'<a class="alt" target="_blank" href="{html.escape(a["link"])}">'
+                f'{html.escape(a["mall"])} <b>{a["price"]:,}원</b></a>'
+                for a in best["alts"]
+            )
+            alts_html = f'<div class="cmp"><span class="cmpl">다른 대형몰</span> {chips}</div>'
 
         # 전일(이전 갱신) 대비 변동
         if best and stats and stats.get("prev") is not None:
