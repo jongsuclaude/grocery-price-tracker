@@ -32,6 +32,12 @@
     { "name": "포도", "category": "과일", "query": "포도", "size": "1kg", "target_price": 13830, "exclude": ["주스", "청", "향", "말랭이", "씨", "젤리"] },
     { "name": "토마토 1kg", "category": "과일", "query": "토마토 1kg", "target_price": 6900, "exclude": ["방울", "대추", "케찹", "페이스트", "소스", "칩"] },
     { "name": "블루베리", "category": "과일", "query": "블루베리", "size": "1kg", "target_price": 7000, "exclude": ["잼", "말랭이", "음료"] },
+    { "name": "체리", "category": "과일", "query": "체리", "size": "500g", "target_price": 16230, "exclude": ["즙", "건", "향", "청"] },
+    { "name": "키위", "category": "과일", "query": "키위", "size": "1kg", "target_price": 11890, "exclude": ["즙", "청", "주스"] },
+    { "name": "청포도", "category": "과일", "query": "청포도", "size": "1kg", "target_price": 14900, "exclude": ["즙", "젤리"] },
+    { "name": "레몬", "category": "과일", "query": "레몬", "size": "500g", "target_price": 9980, "exclude": ["즙", "주스", "청", "오일", "에이드", "농축"] },
+    { "name": "파인애플", "category": "과일", "query": "파인애플", "size": "2kg", "target_price": 6580, "exclude": ["통조림", "즙", "주스", "링", "건", "칩"] },
+    { "name": "메론", "category": "과일", "query": "메론", "size": "1통", "target_price": 9800, "exclude": ["향", "즙", "맛", "바", "수박"] },
 
     { "name": "삼겹살 1근(600g)", "category": "고기", "query": "삼겹살 600g", "target_price": 19980, "exclude": ["양념", "훈제", "다짐", "분쇄", "대패"] },
     { "name": "전지(앞다리살) 1근(600g)", "category": "고기", "query": "앞다리살 600g", "target_price": 15900, "exclude": ["양념", "훈제", "다짐", "분쇄"] },
